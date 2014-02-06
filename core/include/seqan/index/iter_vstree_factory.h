@@ -143,16 +143,24 @@ struct Factory<Iter<TIndex, VSTree<TopDown<ParentLinks<TSpec> > > > > :
     typename Size<TIndex>::Type                 _maxHistoryLength;
     typename Size<Factory>::Type                _maxObjects;
 
-    // NOTE(esiragusa): NVCC cyclic SEQAN_HOST_DEVICE inline problem.
-    Factory()
-//        TBase(),
-//        _maxHistoryLength(0),
-//        _maxObjects(0)
+    Factory() :
+        TBase(),
+        _maxHistoryLength(0),
+        _maxObjects(0)
     {}
 
     Factory(TIndex & index) :
         TBase(index)
     {}
+
+    template <typename TSize, typename THistorySize>
+    Factory(TIndex & index, TSize maxObjects, THistorySize maxHistoryLength) :
+        TBase(index)
+    {
+        setMaxObjects(*this, maxObjects);
+        setMaxHistoryLength(*this, maxHistoryLength);
+        build(*this);
+    }
 };
 
 // ============================================================================
@@ -239,12 +247,12 @@ view(Factory<Iter<TIndex, VSTree<TopDown<ParentLinks<TSpec> > > > > & factory)
 // ----------------------------------------------------------------------------
 
 template <typename TIndex, typename TSpec, typename TSize>
-inline SEQAN_HOST_DEVICE void
+inline void
 setMaxHistoryLength(Factory<Iter<TIndex, VSTree<TSpec> > > & /* factory */, TSize /* maxHistoryLength */)
 {}
 
 template <typename TIndex, typename TSpec, typename TSize>
-inline SEQAN_HOST_DEVICE void
+inline void
 setMaxHistoryLength(Factory<Iter<TIndex, VSTree<TopDown<ParentLinks<TSpec> > > > > & factory, TSize maxHistoryLength)
 {
     factory._maxHistoryLength = maxHistoryLength;
@@ -255,12 +263,12 @@ setMaxHistoryLength(Factory<Iter<TIndex, VSTree<TopDown<ParentLinks<TSpec> > > >
 // ----------------------------------------------------------------------------
 
 template <typename TIndex, typename TSpec, typename TSize>
-inline SEQAN_HOST_DEVICE void
+inline void
 setMaxObjects(Factory<Iter<TIndex, VSTree<TSpec> > > & /* factory */, TSize /* maxObjects */)
 {}
 
 template <typename TIndex, typename TSpec, typename TSize>
-inline SEQAN_HOST_DEVICE void
+inline void
 setMaxObjects(Factory<Iter<TIndex, VSTree<TopDown<ParentLinks<TSpec> > > > > & factory, TSize maxObjects)
 {
     factory._maxObjects = maxObjects;

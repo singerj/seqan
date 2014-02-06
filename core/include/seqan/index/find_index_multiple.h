@@ -97,11 +97,15 @@ struct Finder2<Index<TText, TIndexSpec>, TPattern, Multiple<TSpec> >
     typedef Index<TText, TIndexSpec>            TIndex;
 
     typename Member<Finder2, Factory_>::Type    _factory;
+    typename Score_<TSpec>::Type                _scoreThreshold;
 
-    Finder2() {}
+    Finder2() :
+        _scoreThreshold()
+    {}
 
     Finder2(TIndex & index) :
-        _factory(index)
+        _factory(index),
+        _scoreThreshold()
     {}
 };
 
@@ -180,6 +184,16 @@ struct FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate>
 // ============================================================================
 
 // ----------------------------------------------------------------------------
+// Metafunction Score_; Multiple
+// ----------------------------------------------------------------------------
+
+template <typename TSpec>
+struct Score_<Multiple<TSpec> >
+{
+    typedef typename Score_<TSpec>::Type    Type;
+};
+
+// ----------------------------------------------------------------------------
 // Metafunction Host                                                  [Pattern]
 // ----------------------------------------------------------------------------
 
@@ -197,11 +211,12 @@ struct Host<Pattern<TNeedles, Multiple<TSpec> > >
 template <typename TPattern>
 struct PatternShape_
 {
-    typedef typename Host<TPattern>::Type               TNeedles_;
-    typedef typename Value<TNeedles_>::Type             TNeedle_;
-    typedef typename Value<TNeedle_>::Type              TAlphabet_;
+    typedef typename Host<TPattern>::Type                               TNeedles_;
+    typedef typename Value<TNeedles_>::Type                             TNeedle_;
+    typedef typename Value<TNeedle_>::Type                              TAlphabet_;
+    typedef UngappedShape<Max<MinLength<TNeedles_>::VALUE, 1>::VALUE>   TShapeSpec_;
 
-    typedef Shape<TAlphabet_, UngappedShape<10> >       Type;
+    typedef Shape<TAlphabet_, TShapeSpec_>                              Type;
 };
 
 // ----------------------------------------------------------------------------
@@ -238,32 +253,10 @@ struct Member<Pattern<StringSet<thrust::device_vector<TValue, TAlloc>, TSSetSpec
 };
 #endif
 
-#ifdef PLATFORM_CUDA
-template <typename TValue, typename TAlloc, typename TViewSpec, typename TAllocOuter, typename TSpec>
-struct Member<Pattern<thrust::device_vector<ContainerView<thrust::device_vector<TValue, TAlloc>, TViewSpec>, TAllocOuter>, Multiple<TSpec> >, Hashes_>
-{
-    typedef thrust::device_vector<TValue, TAlloc>               TNeedle_;
-    typedef ContainerView<TNeedle_, TViewSpec>                  TNeedleView_;
-    typedef thrust::device_vector<TNeedleView_, TAllocOuter>    TNeedles_;
-    typedef Pattern<TNeedles_, Multiple<TSpec> >                TPattern_;
-    typedef typename PatternShape_<TPattern_>::Type             TShape_;
-    typedef typename Value<TShape_>::Type                       THash_;
-
-    typedef thrust::device_vector<THash_>                       Type;
-};
-#endif
-
 template <typename TNeedle, typename TViewSpec, typename TSSetSpec, typename TSpec>
 struct Member<Pattern<StringSet<ContainerView<TNeedle, TViewSpec>, TSSetSpec>, Multiple<TSpec> >, Hashes_>
 {
     typedef Pattern<StringSet<TNeedle, TSSetSpec>, Multiple<TSpec> >        TPattern_;
-    typedef typename View<typename Member<TPattern_, Hashes_>::Type>::Type  Type;
-};
-
-template <typename TNeedles, typename TViewSpec, typename TSpec>
-struct Member<Pattern<ContainerView<TNeedles, TViewSpec>, Multiple<TSpec> >, Hashes_>
-{
-    typedef Pattern<TNeedles, Multiple<TSpec> >                             TPattern_;
     typedef typename View<typename Member<TPattern_, Hashes_>::Type>::Type  Type;
 };
 
@@ -289,30 +282,10 @@ struct Member<Pattern<StringSet<thrust::device_vector<TValue, TAlloc>, TSSetSpec
 };
 #endif
 
-#ifdef PLATFORM_CUDA
-template <typename TValue, typename TAlloc, typename TViewSpec, typename TAllocOuter, typename TSpec>
-struct Member<Pattern<thrust::device_vector<ContainerView<thrust::device_vector<TValue, TAlloc>, TViewSpec>, TAllocOuter>, Multiple<TSpec> >, Permutation_>
-{
-    typedef thrust::device_vector<TValue, TAlloc>               TNeedle_;
-    typedef ContainerView<TNeedle_, TViewSpec>                  TNeedleView_;
-    typedef thrust::device_vector<TNeedleView_, TAllocOuter>    TNeedles_;
-    typedef typename Size<TNeedles_>::Type                      TSize_;
-
-    typedef thrust::device_vector<TSize_>                       Type;
-};
-#endif
-
 template <typename TNeedle, typename TViewSpec, typename TSSetSpec, typename TSpec>
 struct Member<Pattern<StringSet<ContainerView<TNeedle, TViewSpec>, TSSetSpec>, Multiple<TSpec> >, Permutation_>
 {
     typedef Pattern<StringSet<TNeedle, TSSetSpec>, Multiple<TSpec> >            TPattern_;
-    typedef typename View<typename Member<TPattern_, Permutation_>::Type>::Type Type;
-};
-
-template <typename TNeedles, typename TViewSpec, typename TSpec>
-struct Member<Pattern<ContainerView<TNeedles, TViewSpec>, Multiple<TSpec> >, Permutation_>
-{
-    typedef Pattern<TNeedles, Multiple<TSpec> >                                 TPattern_;
     typedef typename View<typename Member<TPattern_, Permutation_>::Type>::Type Type;
 };
 
@@ -359,6 +332,7 @@ _preprocessKernel(Pattern<TNeedles, Multiple<TSpec> > pattern)
 
     // Compute the hash of a needle.
     TShape shape;
+    SEQAN_ASSERT_LEQ(weight(shape), length(pattern.data_host[threadId]));
     pattern._hashes[threadId] = hash(shape, begin(pattern.data_host[threadId], Standard()));
 
     // Fill with the identity permutation.
@@ -389,7 +363,9 @@ _findKernel(Finder2<TText, TPattern, Multiple<TSpec> > finder, TPattern pattern,
     ctx._patternIt = pattern._permutation[threadId];
 
     // Find a single needle.
-    find(ctx.baseFinder, pattern.data_host[pattern._permutation[threadId]], ctx);
+    clear(ctx.baseFinder);
+    setScoreThreshold(ctx.baseFinder, getScoreThreshold(finder));
+    find(ctx.baseFinder, pattern.data_host[ctx._patternIt], ctx);
 }
 #endif
 
@@ -428,6 +404,7 @@ _preprocess(Pattern<TNeedles, Multiple<TSpec> > & pattern, ExecDevice const & /*
 
     // Launch the preprocessing kernel.
     _preprocessKernel<<<activeBlocks, ctaSize>>>(view(pattern));
+    SEQAN_ASSERT_EQ(cudaGetLastError(), cudaSuccess);
 
     // Sort the pattern.
     thrust::sort_by_key(pattern._hashes.begin(), pattern._hashes.end(), pattern._permutation.begin());
@@ -512,7 +489,9 @@ _find(Finder2<TText, TPattern, Multiple<TSpec> > & finder,
     for (TSize needleId = 0; needleId < needlesCount; ++needleId)
     {
         clear(ctx.baseFinder);
-        find(ctx.baseFinder, needlesView[needleId], ctx);
+        setScoreThreshold(ctx.baseFinder, getScoreThreshold(finder));
+        ctx._patternIt = needleId;
+        find(ctx.baseFinder, needlesView[ctx._patternIt], ctx);
     }
 }
 
@@ -547,6 +526,7 @@ _find(Finder2<TText, TPattern, Multiple<TSpec> > & finder,
 
     // Launch the find kernel.
     _findKernel<<<activeBlocks, ctaSize>>>(view(finder), view(pattern), view(delegate));
+    SEQAN_ASSERT_EQ(cudaGetLastError(), cudaSuccess);
 }
 #endif
 
@@ -559,6 +539,8 @@ inline void
 find(Finder2<TText, TPattern, Multiple<TSpec> > & finder, TPattern & pattern, TDelegate & delegate)
 {
     typedef Finder2<TText, TPattern,  Multiple<TSpec> > TFinder;
+
+    if (empty(needle(pattern))) return;
 
     _find(finder, pattern, delegate, typename ExecSpace<TFinder>::Type());
 }
@@ -611,6 +593,17 @@ inline SEQAN_HOST_DEVICE typename TextIterator_<TText, TPattern, Multiple<TSpec>
 textIterator(FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate> const & ctx)
 {
     return textIterator(ctx.baseFinder);
+}
+
+// ----------------------------------------------------------------------------
+// Function getScore()
+// ----------------------------------------------------------------------------
+
+template <typename TText, typename TPattern, typename TSpec, typename TDelegate>
+SEQAN_HOST_DEVICE inline typename Score_<TSpec>::Type
+getScore(FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate> const & ctx)
+{
+    return getScore(ctx.baseFinder);
 }
 
 }
