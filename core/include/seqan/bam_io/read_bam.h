@@ -115,6 +115,8 @@ typedef Tag<Bam_> Bam;
 ..include:seqan/bam_io.h
 */
 
+//TODO(singer): Remove #if FALSE and #endif
+#if FALSE
 template <typename TStream, typename TNameStore, typename TNameStoreCache>
 int readRecord(BamHeader & header,
                BamIOContext<TNameStore, TNameStoreCache> & context,
@@ -387,6 +389,7 @@ int readRecord(BamAlignmentRecord & record,
 
     return 0;
 }
+#endif // #if FALSE
 
 }  // namespace seqan
 
