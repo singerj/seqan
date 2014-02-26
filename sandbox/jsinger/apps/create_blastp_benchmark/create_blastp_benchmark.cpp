@@ -31,6 +31,7 @@
 // ==========================================================================
 // Author: Your Name <your.email@example.net>
 // ==========================================================================
+#include <iostream>
 
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
@@ -79,6 +80,9 @@ struct AppOptions
     // max length reads
     unsigned maxLengthSeqReads;
 
+    // the error rate
+    double errorRate;
+
     AppOptions() :
         dbFileName("db.fasta"),
         numSeqDB(100000),
@@ -87,7 +91,8 @@ struct AppOptions
         readsFileName("reads.fasta"),
         numSeqReads(100000),
         minLengthSeqReads(50),
-        maxLengthSeqReads(50)
+        maxLengthSeqReads(50),
+        errorRate(5.0)
     {}
 };
 
@@ -123,6 +128,8 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     addOption(parser, seqan::ArgParseOption("nR", "numSeqReads", "Set the number of reads.", ArgParseArgument::INTEGER, "INT"));
     addOption(parser, seqan::ArgParseOption("miR", "minLengthSeqReads", "Set the minimum length of reads.", ArgParseArgument::INTEGER, "INT"));
     addOption(parser, seqan::ArgParseOption("maR", "maxLengthSeqReads", "Set the maximum length of reads.", ArgParseArgument::INTEGER, "INT"));
+    
+    addOption(parser, seqan::ArgParseOption("er", "errorRate", "Set the error rate of the reads.", ArgParseArgument::DOUBLE, "ERROR"));
 
     // Add Examples Section.
     addTextSection(parser, "Examples");
@@ -145,6 +152,8 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     getOptionValue(options.numSeqReads, parser, "numSeqDB");
     getOptionValue(options.minLengthSeqReads, parser, "minLengthSeqDB");
     getOptionValue(options.maxLengthSeqReads, parser, "maxLengthSeqDB");
+
+    getOptionValue(options.errorRate, parser, "errorRate");
 
     return seqan::ArgumentParser::PARSE_OK;
 }
@@ -242,7 +251,11 @@ void createDatabase(AppOptions const & options){
     String<char, MMap<> > db;
     open(db, toCString(options.dbFileName));
 
-    for (int i = 0; i < options.numSeqDB; ++i)
+    String<unsigned> dbFreq;
+    resize(dbFreq, 20, 0);
+
+    AminoAcid temp;
+    for (unsigned i = 0; i < options.numSeqDB; ++i)
     {
         appendValue(db, '>');
         append(db, "a\n");
@@ -251,10 +264,19 @@ void createDatabase(AppOptions const & options){
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
 
         Pdf<Uniform<double> > uniformDouble(0, 100.09);
-        for (unsigned i = 0; i < entryLength; ++i)
-            appendValue(db, getAminoAcidDB(pickRandomNumber(rng, uniformDouble)));
+        for (unsigned j = 0; j < entryLength; ++j)
+        {
+            temp = getAminoAcidDB(pickRandomNumber(rng, uniformDouble));
+            appendValue(db, temp);
+            ++dbFreq[(unsigned)temp];
+        }
         append(db, "\n");
     }
+
+    std::ofstream outStream;
+    outStream.open("test.txt",std::ios::out);
+    for (unsigned i = 0; i < length(dbFreq); ++i)
+        outStream << i << "\t" << static_cast<double>(dbFreq[i]) / static_cast<double>(lengthSum(db)) << "\n";
 }
 
 void createReads(AppOptions const & options){
@@ -271,7 +293,15 @@ void createReads(AppOptions const & options){
     open(reads, toCString(options.readsFileName));
 
     Pdf<Uniform<int> > uniformSeqIdRng(0, length(seqs) - 1);
-    for (int i = 0; i < options.numSeqReads; ++i)
+
+    std::ofstream outStream;
+    outStream.open("startPos.txt",std::ios::out);
+
+    std::ofstream outStreamQual;
+    outStreamQual.open("quals.txt",std::ios::out);
+
+    long globalAlignScore = 0;
+    for (unsigned i = 0; i < options.numSeqReads; ++i)
     {
         appendValue(reads, '>');
         append(reads, "a\n");
@@ -288,25 +318,43 @@ void createReads(AppOptions const & options){
             Pdf<Uniform<int> > uniformSeqStartRng(0, length(seqs[uniformSeqId]) - 1 - entryLength);
             unsigned int uniformSeqStart = pickRandomNumber(rng, uniformSeqStartRng);
 
+            outStream << uniformSeqId << "\t" << uniformSeqStart << std::endl;
+
+            Pdf<Uniform<double> > uniformErrorRate(0, 100);
+
+            unsigned numErrors = 0;
+            String<AminoAcid> read;
             for (unsigned i = 0; i < entryLength; ++i)
-                appendValue(reads, getAminoAcidRead(seqs[uniformSeqId][uniformSeqStart + i]));
+            {
+                if (pickRandomNumber(rng, uniformErrorRate) < options.errorRate)
+                {
+                    appendValue(read, getAminoAcidRead(seqs[uniformSeqId][uniformSeqStart + i]));
+                    ++numErrors;
+                }
+                else 
+                    appendValue(read, seqs[uniformSeqId][uniformSeqStart + i]);
+            }
+            append(reads, read);
             append(reads, "\n");
+
+            Align<String<AminoAcid> > align;
+            resize(rows(align), 2);
+            assignSource(row(align, 0), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
+            assignSource(row(align, 1), read);
+            Blosum62 scoringScheme;
+ 
+            int alignScore = localAlignment(align, scoringScheme);
+            globalAlignScore += alignScore;
+            outStreamQual << entryLength << "\t" << numErrors << "\t" << alignScore << std::endl;
         }
     }
+    outStreamQual << globalAlignScore / options.numSeqReads;
 }
 
 int main(int argc, char const ** argv)
 {
     initFreq();
     initDist(Blosum62());
-
-    /*for (unsigned i = 0; i < 21; ++i)
-    {
-        for (unsigned j = 0; j < 20; ++j)
-            std::cout << dist[j][i] << '\t';
-        std::cerr << std::endl;
-    }*/
-
 
     // Parse the command line.
     seqan::ArgumentParser parser;
