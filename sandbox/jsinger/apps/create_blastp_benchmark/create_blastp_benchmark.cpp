@@ -150,8 +150,8 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 
     getArgumentValue(options.readsFileName, parser, 1); 
     getOptionValue(options.numSeqReads, parser, "numSeqDB");
-    getOptionValue(options.minLengthSeqReads, parser, "minLengthSeqDB");
-    getOptionValue(options.maxLengthSeqReads, parser, "maxLengthSeqDB");
+    getOptionValue(options.minLengthSeqReads, parser, "minLengthSeqReads");
+    getOptionValue(options.maxLengthSeqReads, parser, "maxLengthSeqReads");
 
     getOptionValue(options.errorRate, parser, "errorRate");
 
@@ -301,6 +301,7 @@ void createReads(AppOptions const & options){
     outStreamQual.open("quals.txt",std::ios::out);
 
     long globalAlignScore = 0;
+    long globalOrigAlignScore = 0;
     for (unsigned i = 0; i < options.numSeqReads; ++i)
     {
         appendValue(reads, '>');
@@ -308,6 +309,8 @@ void createReads(AppOptions const & options){
 
         Pdf<Uniform<int> > uniformInt(options.minLengthSeqReads, options.maxLengthSeqReads);
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
+
+        std::cerr << entryLength << " " << options.minLengthSeqReads << " " <<  options.maxLengthSeqReads << std::endl;
 
         unsigned int uniformSeqId = pickRandomNumber(rng, uniformSeqIdRng);
 
@@ -345,10 +348,15 @@ void createReads(AppOptions const & options){
  
             int alignScore = localAlignment(align, scoringScheme);
             globalAlignScore += alignScore;
-            outStreamQual << entryLength << "\t" << numErrors << "\t" << alignScore << std::endl;
+
+            assignSource(row(align, 1), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
+            int alignOrigScore = localAlignment(align, scoringScheme);
+            globalOrigAlignScore += alignOrigScore;
+
+            outStreamQual << entryLength << "\t" << numErrors << "\t" << alignScore << "\t" << alignOrigScore << std::endl;
         }
     }
-    outStreamQual << globalAlignScore / options.numSeqReads;
+    outStreamQual << globalAlignScore / options.numSeqReads << "\t" << globalOrigAlignScore / options.numSeqReads << std::endl; ;
 }
 
 int main(int argc, char const ** argv)
