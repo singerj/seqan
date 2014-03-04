@@ -35,10 +35,10 @@
 # ============================================================================
 
 if (WIN32)
-    # For all contrib versions...
-	foreach (_SEQAN_CONTRIB_VERSION D20111031 D20130710)
-	  set (_SEQAN_CONTRIB_DIR "seqan-contrib-${_SEQAN_CONTRIB_VERSION}")
-	  
+  # For all contrib versions...
+  foreach (_SEQAN_CONTRIB_VERSION D20111031 D20130710 D20131121)
+    set (_SEQAN_CONTRIB_DIR "seqan-contrib-${_SEQAN_CONTRIB_VERSION}")
+
 	  # Determine architecture for the precompiled contribs.
 	  if (CMAKE_GENERATOR MATCHES ".*Win64")
 		set (CONTRIB_ARCH "x64")
@@ -99,13 +99,13 @@ if (WIN32)
 		# Compose contrib path.
 		set(SEQAN_CONTRIB_PATH "${SEQAN_CONTRIB_BASE}/${SEQAN_CONTRIB_VARIANT}")
 
-		# Extend CMAKE_FIND_ROOT_PATH.
+		# Extend CMAKE_PREFIX_PATH.
 		if (IS_DIRECTORY ${SEQAN_CONTRIB_PATH})
-		  set (CMAKE_FIND_ROOT_PATH ${SEQAN_CONTRIB_PATH} ${CMAKE_FIND_ROOT_PATH})
+		  set (CMAKE_PREFIX_PATH ${SEQAN_CONTRIB_PATH} ${CMAKE_PREFIX_PATH})
 		endif (IS_DIRECTORY ${SEQAN_CONTRIB_PATH})
 	  endif (IS_DIRECTORY ${SEQAN_CONTRIB_BASE})
 
-      message(STATUS "CMAKE_FIND_ROOT_PATH is \"${CMAKE_FIND_ROOT_PATH}\".")
+      message(STATUS "CMAKE_PREFIX_PATH is \"${CMAKE_PREFIX_PATH}\".")
 
       # Break out if contribs could be found.
       if (DEFINED SEQAN_CONTRIB_BASE)

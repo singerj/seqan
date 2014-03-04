@@ -34,8 +34,6 @@
 // Code for reading Bam.
 // ==========================================================================
 
-// TODO(holtgrew): Indexing.
-
 #ifndef CORE_INCLUDE_SEQAN_BAM_IO_READ_BAM_H_
 #define CORE_INCLUDE_SEQAN_BAM_IO_READ_BAM_H_
 
@@ -91,11 +89,10 @@ typedef Tag<Bam_> Bam;
  * @brief Read a record from a SAM/BAM file.
  *
  * @signature int readRecord(record, context, stream, tag);
- * @signature int readRecord(header, context, stream, tag);
  *
  * @param[out]    record  The @link BamAlignmentRecord @endlink object to read the information into.
  * @param[out]    header  The @link BamHeader @endlink object to read the header information into.
- * @param[in,out] context The BamIOContext object to use.
+ * @param[in,out] context The @link BamIOContext @endlink object to use.
  * @param[in,out] stream  The @link StreamConcept Stream @endlink to read from.
  * @param[in]     tag     The format tag, one of <tt>Sam</tt> and <tt>Bam</tt>.
  *
@@ -118,57 +115,47 @@ typedef Tag<Bam_> Bam;
 ..include:seqan/bam_io.h
 */
 
-template <typename TStream, typename TNameStore, typename TNameStoreCache>
-int readRecord(BamHeader & header,
+template <typename TForwardIter, typename TNameStore, typename TNameStoreCache>
+void readRecord(BamHeader & header,
                BamIOContext<TNameStore, TNameStoreCache> & context,
-               TStream & stream,
+               TForwardIter & iter,
                Bam const & /*tag*/)
 {
-    int res = 0;
-
     // Read BAM magic string.
-    char magic[5] = "\0\0\0\0";
-    res = streamReadBlock(&magic[0], stream, 4);
-    if (res != 4)
-        return 1;  // EOF or error while reading.
-    if (strcmp(magic, "BAM\1") != 0)
-        return 1;  // Magic was wrong.
+    // char magic[5] = "\0\0\0\0";
+    String<char> magic;// = "0000";
+    clear(magic);
+    readUntil(magic, iter, CountDownFunctor<>(4));
+    if (magic != "BAM\1")
+        throw std::runtime_error("No correct BAM format.");
 
     // Read header text, including null padding.
     __int32 lText;
-    res = streamReadBlock(reinterpret_cast<char *>(&lText), stream, 4);
-    if (res != 4)
-        return 1;  // Error reading the length of the header text.
+    readRawByte(lText, iter, CountDownFunctor<>(4));
+
     CharString samHeader;
-    resize(samHeader, lText);
-    res = streamReadBlock(&front(samHeader), stream, lText);
+    readUntil(samHeader, iter, CountDownFunctor<>(lText));
+
     // Truncate to first position of '\0'.
-    typedef Iterator<CharString, Standard>::Type TIter;
-    TIter it = begin(samHeader, Standard());
+    Iterator<CharString, Rooted>::Type it = begin(samHeader);
     for (; it != end(samHeader); ++it)
         if (*it == '\0')
             break;
-    resize(samHeader, it - begin(samHeader, Standard()));
+    resize(samHeader, static_cast<__uint32>(it - begin(samHeader))); 
 
     // Parse out header records.
-    typedef Stream<CharArray<char *> > THeaderStream;
-    THeaderStream headerStream(&samHeader[0], &samHeader[0] + length(samHeader));
-    RecordReader<THeaderStream, SinglePass<> > headerReader(headerStream);
     BamHeaderRecord headerRecord;
-    while (!atEnd(headerReader))
+    it = begin(samHeader);
+    while (!atEnd(it))
     {
         clear(headerRecord);
-        res = readRecord(headerRecord, context, headerReader, Sam());
-        if (res != 0)
-            return 1;  // Error reading embedded SAM header.
+        readRecord(headerRecord, context, it, Sam());
         appendValue(header.records, headerRecord);
     }
 
     // Read # reference sequences.
     __int32 nRef;
-    res = streamReadBlock(reinterpret_cast<char *>(&nRef), stream, 4);
-    if (res != 4)
-        return 1;  // Error reading the number of sequences.
+    readRawByte(nRef, iter, CountDownFunctor<>(4));
     CharString name;
 
     clear(context.translateFile2GlobalRefId);
@@ -178,20 +165,13 @@ int readRecord(BamHeader & header,
     {
         // Read length of the reference name.
         __int32 nName;
-        res = streamReadBlock(reinterpret_cast<char *>(&nName), stream, 4);
-        if (res != 4)
-            return 1;  // Error reading the number of sequences.
-        // Read name of the reference sequence;
-        resize(name, nName);
-        res = streamReadBlock(&front(name), stream, nName);
-        if (res != nName)
-            return 1;  // Error reading the number of sequences.
+        readRawByte(nName, iter, CountDownFunctor<>(4));
+        clear(name);
+        readUntil(name, iter, CountDownFunctor<>(nName));
         resize(name, nName - 1);
         // Read length of the reference sequence.
         __int32 lRef;
-        res = streamReadBlock(reinterpret_cast<char *>(&lRef), stream, 4);
-        if (res != 4)
-            return 1;  // Error reading the number of sequences.
+        readRawByte(lRef, iter, CountDownFunctor<>(4));
 
         // Store sequence info.
         typedef typename BamHeader::TSequenceInfo TSequenceInfo;
@@ -205,8 +185,6 @@ int readRecord(BamHeader & header,
         }
         context.translateFile2GlobalRefId[i] = globalRId;
     }
-
-    return 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -219,27 +197,22 @@ int readRecord(BamHeader & header,
 ..param.alignmentRecord.type:Class.BamAlignmentRecord
 */
 
-template <typename TStream, typename TNameStore, typename TNameStoreCache>
-int readRecord(BamAlignmentRecord & record,
-               BamIOContext<TNameStore, TNameStoreCache> & context,
-               TStream & stream,
-               Bam const & /*tag*/)
+template <typename TForwardIter, typename TNameStore, typename TNameStoreCache>
+void readRecord(BamAlignmentRecord & record,
+                BamIOContext<TNameStore, TNameStoreCache> & context,
+                TForwardIter & iter,
+                Bam const & /*tag*/)
 {
-    int res = 0;
     (void)context;  // Only used for assertions.
-
+    
     // Read size of the remaining block.
     __int32 remainingBytes = 0;
-    res = streamReadBlock(reinterpret_cast<char *>(&remainingBytes), stream, 4);
-    if (res != 4)
-        return 1;  // Error reading the number of sequences.
-
+    readRawByte(remainingBytes, iter, CountDownFunctor<>(4));
+   
     // Reference sequence id.
     SEQAN_ASSERT_GT(remainingBytes, 4);
     record.rID = 0;
-    res = streamReadBlock(reinterpret_cast<char *>(&record.rID), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(record.rID, iter, CountDownFunctor<>(4));
     SEQAN_ASSERT_GEQ(record.rID, -1);
 
     // Translate file local rID into a global rID that is compatible with the context nameStore.
@@ -253,17 +226,13 @@ int readRecord(BamAlignmentRecord & record,
     // 0-based position.
     SEQAN_ASSERT_GT(remainingBytes, 4);
     record.beginPos = 0;
-    res = streamReadBlock(reinterpret_cast<char *>(&record.beginPos), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(record.beginPos, iter, CountDownFunctor<>(4));
     remainingBytes -= 4;
 
     // Bin, mapping quality, read name length.
     SEQAN_ASSERT_GT(remainingBytes, 4);
     __uint32 binMqNl = 0;
-    res = streamReadBlock(reinterpret_cast<char *>(&binMqNl), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(binMqNl, iter, CountDownFunctor<>(4));
     remainingBytes -= 4;
     record.bin = binMqNl >> 16;
     record.mapQ = (binMqNl >> 8) & 0x000000ff;
@@ -272,9 +241,7 @@ int readRecord(BamAlignmentRecord & record,
     // flag, cigar string length.
     SEQAN_ASSERT_GT(remainingBytes, 4);
     __uint32 flagNc = 0;
-    res = streamReadBlock(reinterpret_cast<char *>(&flagNc), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(flagNc, iter, CountDownFunctor<>(4));
     remainingBytes -= 4;
     record.flag = flagNc >> 16;
     __uint16 nCigarOp = flagNc & 0x0000FFFF;
@@ -282,39 +249,29 @@ int readRecord(BamAlignmentRecord & record,
     // sequence length.
     SEQAN_ASSERT_GT(remainingBytes, 4);
     __int32 lSeq = 0;
-    res = streamReadBlock(reinterpret_cast<char *>(&lSeq), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(lSeq, iter, CountDownFunctor<>(4));
     remainingBytes -= 4;
 
     // reference id of the next fragment.
     SEQAN_ASSERT_GT(remainingBytes, 4);
     record.rNextId = 0;
-    res = streamReadBlock(reinterpret_cast<char *>(&record.rNextId), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(record.rNextId, iter, CountDownFunctor<>(4));
     remainingBytes -= 4;
 
     // 0-based position of the next fragment.
     SEQAN_ASSERT_GT(remainingBytes, 4);
-    res = streamReadBlock(reinterpret_cast<char *>(&record.pNext), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(record.pNext, iter, CountDownFunctor<>(4));
     remainingBytes -= 4;
 
     // template length.
     SEQAN_ASSERT_GT(remainingBytes, 4);
-    res = streamReadBlock(reinterpret_cast<char *>(&record.tLen), stream, 4);
-    if (res != 4)
-        return res;
+    readRawByte(record.tLen, iter, CountDownFunctor<>(4));
     remainingBytes -= 4;
 
     // read name.
     SEQAN_ASSERT_GT(remainingBytes, lReadName);
-    resize(record.qName, lReadName);
-    res = streamReadBlock(reinterpret_cast<char *>(&record.qName[0]), stream, lReadName);
-    if (res != lReadName)
-        return res;
+    //resize(record.qName);
+    readUntil(record.qName, iter, CountDownFunctor<>(lReadName));
     resize(record.qName, lReadName - 1);
     remainingBytes -= lReadName;
 
@@ -326,9 +283,7 @@ int readRecord(BamAlignmentRecord & record,
     for (TCigarIter it = begin(record.cigar, Rooted()); !atEnd(it); goNext(it))
     {
         __uint32 ui = 0;
-        res = streamReadBlock(reinterpret_cast<char *>(&ui), stream, 4);
-        if (res != 4)
-            return res;
+        readRawByte(ui, iter, CountDownFunctor<>(4));
         it->operation = CIGAR_MAPPING[ui & 0x0007];
         it->count = ui >> 4;
     }
@@ -347,9 +302,7 @@ int readRecord(BamAlignmentRecord & record,
         for (__int32 i = 0; i < lSeq; i += 2)
         {
             __uint8 ui;
-            res = streamReadChar(reinterpret_cast<char &>(ui), stream);
-            if (res != 0)
-                return res;
+            readRawByte(ui, iter, CountDownFunctor<>(1));
             *it++ = SEQ_MAPPING[ui >> 4];
             *it++ = SEQ_MAPPING[ui & 0x0f];
         }
@@ -359,12 +312,10 @@ int readRecord(BamAlignmentRecord & record,
 
     // phred quality
     SEQAN_ASSERT_GEQ(remainingBytes, lSeq);
-    resize(record.qual, lSeq, Exact());
     if (lSeq > 0)
     {
-        res = streamReadBlock(&(record.qual[0]), stream, lSeq);
-        if (res != lSeq)
-            return res;
+        clear(record.qual);
+        readUntil(record.qual, iter, CountDownFunctor<>(lSeq));
     }
     // If qual is a sequence of 0xff (heuristic same as samtools: Only look at first byte) then we clear it, to get the
     // representation of '*';
@@ -378,19 +329,14 @@ int readRecord(BamAlignmentRecord & record,
     // tags
     if (remainingBytes > 0)
     {
-        resize(record.tags, remainingBytes);
-        res = streamReadBlock(&record.tags[0], stream, remainingBytes);
-        if (res != remainingBytes)
-            return 1;
+        //resize(record.tags, remainingBytes);
+        readUntil(record.tags, iter, CountDownFunctor<>(remainingBytes));
     }
     else
     {
         clear(record.tags);
     }
-
-    return 0;
 }
-
 }  // namespace seqan
 
 #endif  // #ifndef CORE_INCLUDE_SEQAN_BAM_IO_READ_BAM_H_

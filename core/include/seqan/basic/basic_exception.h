@@ -54,33 +54,36 @@
 // ============================================================================
 
 /*!
- * @macro SEQAN_EXCEPTIONS
+ * @defgroup ExceptionHandling SeqAn Exception Handling
+ * @brief Macros supporting exception handling on various platforms.
+ */
+
+/*!
+ * @macro ExceptionHandling#SEQAN_EXCEPTIONS
  * @headerfile <seqan/basic.h>
  * @brief Determines whether exceptions are enabled or not.
  * 
- * @signature SEQAN_EXCEPTIONS
+ * @signature #define SEQAN_EXCEPTIONS
  *
- * @see SEQAN_TRY
- * @see SEQAN_CATCH
- * @see SEQAN_THROW
+ * @see ExceptionHandling#SEQAN_TRY
+ * @see ExceptionHandling#SEQAN_CATCH
+ * @see ExceptionHandling#SEQAN_THROW
  * @see Exception
  */
 
 #define SEQAN_EXCEPTIONS    __EXCEPTIONS
 
 /*!
- * @macro SEQAN_TRY
+ * @macro ExceptionHandling#SEQAN_TRY
  * @headerfile <seqan/basic.h>
  * @brief Replaces the C++ try keyword.
  * 
  * @signature SEQAN_TRY {} SEQAN_CATCH() {}
- *
- * @section Remarks
  * 
- * When exceptions are disabled, i.e. SEQAN_EXCEPTIONS is set to false, the code inside the try block is always executed".
+ * When exceptions are disabled, i.e. SEQAN_EXCEPTIONS is set to false, the code inside the try block is always executed.
  * 
- * @see SEQAN_CATCH
- * @see SEQAN_THROW
+ * @see ExceptionHandling#SEQAN_CATCH
+ * @see ExceptionHandling#SEQAN_THROW
  * @see Exception
  *
  * @section Examples
@@ -100,48 +103,42 @@
  */
 
 /*!
- * @macro SEQAN_CATCH
+ * @macro ExceptionHandling#SEQAN_CATCH
  * @headerfile <seqan/basic.h>
  * @brief Replaces the C++ catch keyword.
- * 
+ *
  * @signature SEQAN_TRY {} SEQAN_CATCH() {}
  *
- * @section Remarks
+ * When exceptions are disabled, i.e. SEQAN_EXCEPTIONS is set to false, the code inside the catch block is never executed.
  *
- * When exceptions are disabled, i.e. SEQAN_EXCEPTIONS is set to false, the code inside the catch block is never executed".
- * 
- * @see SEQAN_TRY
- * @see SEQAN_THROW
+ * @see ExceptionHandling#SEQAN_TRY
+ * @see ExceptionHandling#SEQAN_THROW
  * @see Exception
  *
  * @section Examples
  *
- * See @link SEQAN_TRY @endlink for a full example.
- *
+ * See @link ExceptionHandling#SEQAN_TRY @endlink for a full example.
  */
 
 /*!
- * @macro SEQAN_THROW
+ * @macro ExceptionHandling#SEQAN_THROW
  * @headerfile <seqan/basic.h>
  * @brief Replaces the C++ throw keyword.
- * 
+ *
  * @signature SEQAN_THROW(Exception);
  *
- * @section Remarks
+ * When exceptions are disabled, i.e. AssertMacros#SEQAN_EXCEPTIONS is set to false, the macro turns into SEQAN_FAIL.
  *
- * When exceptions are disabled, i.e. SEQAN_EXCEPTIONS is set to false, the macro turns into SEQAN_FAIL".
- * 
- * @see SEQAN_TRY
- * @see SEQAN_CATCH
- * @see SEQAN_FAIL
+ * @see ExceptionHandling#SEQAN_TRY
+ * @see ExceptionHandling#SEQAN_CATCH
+ * @see AssertMacros#SEQAN_FAIL
  * @see Exception
  *
  * @section Examples
  *
- * See @link SEQAN_TRY @endlink for a full example.
- *
+ * See @link ExceptionHandling#SEQAN_TRY @endlink for a full example.
  */
- 
+
 #ifdef SEQAN_EXCEPTIONS
 
 #define SEQAN_TRY           try
@@ -173,7 +170,13 @@ namespace seqan {
  * @class Exception
  * @headerfile <seqan/basic.h>
  * @brief Generic SeqAn exception.
- * @signature Exception();
+ * @signature typedef std::exception RuntimeError;
+ *
+ * @fn Exception::Exception
+ * @brief Constructor.
+ *
+ * @signature Exception::Exception(msg);
+ * @param[in] msg The message as a <tt>std::string</tt>.
  */
 
 typedef std::exception          Exception;
@@ -185,8 +188,14 @@ typedef std::exception          Exception;
 /*!
  * @class BadAlloc
  * @headerfile <seqan/basic.h>
- * @brief Bad memory allocation exception.
- * @signature BadAlloc();
+ * @brief Generic SeqAn exception.
+ * @signature typedef std::bad_alloc BadAlloc;
+ *
+ * @fn BadAlloc::BadAlloc
+ * @brief Constructor.
+ *
+ * @signature BadAlloc::BadAlloc(msg);
+ * @param[in] msg The message as a <tt>std::string</tt>.
  */
 
 typedef std::bad_alloc          BadAlloc;
@@ -198,8 +207,14 @@ typedef std::bad_alloc          BadAlloc;
 /*!
  * @class BadCast
  * @headerfile <seqan/basic.h>
- * @brief Bad cast exception.
- * @signature BadCast();
+ * @brief Generic SeqAn exception.
+ * @signature typedef std::bad_cast BadCast;
+ *
+ * @fn BadCast::BadCast
+ * @brief Constructor.
+ *
+ * @signature BadCast::BadCast(msg);
+ * @param[in] msg The message as a <tt>std::string</tt>.
  */
 
 typedef std::bad_cast           BadCast;
@@ -222,7 +237,14 @@ typedef std::bad_cast           BadCast;
  * @class RuntimeError
  * @headerfile <seqan/basic.h>
  * @brief Runtime error exception.
- * @signature RuntimeError("Message");
+ * @signature typedef std::runtime_error RuntimeError;
+ *
+ *
+ * @fn RuntimeError::RuntimeError
+ * @brief Constructor.
+ *
+ * @signature RuntimeError::RuntimeError(msg);
+ * @param[in] msg The message as a <tt>std::string</tt>.
  */
 
 typedef std::runtime_error      RuntimeError;
@@ -288,30 +310,46 @@ struct AssertFunctor
 // Class Demangler
 // ----------------------------------------------------------------------------
 // Holds the name of a given C++ type T.
-// NOTE(esiragusa): this class could become a subclass of CStyle String...
 
 template <typename T>
 struct Demangler
 {
-    char *data_begin;
+#ifdef PLATFORM_GCC
+    char * data_begin;
+#else
+    char const * data_begin;
+#endif //PLATFORM_GCC
 
     Demangler()
     {
         T t;
-        _demangle(*this, t);
+        _demangle(t);
     }
 
-    Demangler(T const & t)
+    Demangler(T & t)
     {
-        _demangle(*this, t);
+        _demangle(t);
     }
 
+#ifdef PLATFORM_GCC
     ~Demangler()
     {
-#ifdef PLATFORM_GCC
         free(data_begin);
-#endif
     }
+
+    void _demangle(T & t)
+    {
+        int status;
+        data_begin = abi::__cxa_demangle(typeid(t).name(), NULL, NULL, &status);
+        if (status != 0)
+            SEQAN_FAIL("Demangling of %s failed with error code %d\n", typeid(t).name(), status);
+    }
+#else
+    void _demangle(T & t)
+    {
+        data_begin = typeid(t).name();
+    }
+#endif //PLATFORM_GCC
 };
 
 // ============================================================================
@@ -319,26 +357,11 @@ struct Demangler
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// Function _demangle(Demangler)
-// ----------------------------------------------------------------------------
-
-template <typename T>
-inline void _demangle(Demangler<T> & me, T const & t)
-{
-#ifdef PLATFORM_GCC
-    int status;
-    me.data_begin = abi::__cxa_demangle(typeid(t).name(), NULL, NULL, &status);
-#else
-    me.data_begin = typeid(t).name();
-#endif
-}
-
-// ----------------------------------------------------------------------------
 // Function toCString(Demangler)
 // ----------------------------------------------------------------------------
 
 template <typename T>
-inline char * toCString(Demangler<T> const & me)
+inline char const * toCString(Demangler<T> const & me)
 {
     return me.data_begin;
 }
@@ -347,8 +370,18 @@ inline char * toCString(Demangler<T> const & me)
 // Function globalExceptionHandler()
 // ----------------------------------------------------------------------------
 
+#if defined(SEQAN_EXCEPTIONS) && !defined(SEQAN_NO_GLOBAL_EXCEPTION_HANDLER)
+// Declare global exception handler.
+static void globalExceptionHandler();
+
+// Install global exception handler.
+static const std::terminate_handler _globalExceptionHandler = std::set_terminate(globalExceptionHandler);
+
 static void globalExceptionHandler()
 {
+    // Suppress unused variable warning.
+    (void)_globalExceptionHandler;
+
     SEQAN_TRY
     {
         SEQAN_RETHROW;
@@ -357,12 +390,12 @@ static void globalExceptionHandler()
     {
         SEQAN_FAIL("Uncaught exception of type %s: %s", toCString(Demangler<Exception>(e)), e.what());
     }
+    SEQAN_CATCH(...)
+    {
+        SEQAN_FAIL("Uncaught exception of unknown type.\n");
+    }
 }
-
-// Install global exception handler.
-#ifdef SEQAN_EXCEPTIONS
-static const std::terminate_handler _globalExceptionHandler = std::set_terminate(globalExceptionHandler);
-#endif
+#endif  // #if defined(SEQAN_EXCEPTIONS) && !defined(SEQAN_NO_GLOBAL_EXCEPTION_HANDLER)
 
 }  // namespace seqan
 
