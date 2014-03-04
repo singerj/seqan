@@ -365,7 +365,7 @@ inline void readOne(TTarget & target, TFwdIterator &iter, TIgnoreFunctor const &
     if (atEnd(iter))
         throw UnexpectedEnd();
 
-    Asserter<TIgnoreFunctor, ParseError> asserter(ignoreFunctor);
+    AssertFunctor<TIgnoreFunctor, ParseError> asserter(ignoreFunctor);
 
     asserter(*iter);
     target = *iter;
