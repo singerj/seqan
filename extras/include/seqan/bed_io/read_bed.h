@@ -271,7 +271,6 @@ _readBedRecordNoData(BedRecord<Bed12> & record,
     clear(buffer);
     readUntil(buffer, iter, OrFunctor<IsTab, IsNewline>());
     appendValue(record.blockBegins, lexicalCast<int>(buffer) - 1);
-    // TODO(singer): Why can there be more columns than 12???
     if (isNewline(value(iter)))
     {
         skipLine(iter);

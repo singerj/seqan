@@ -59,6 +59,8 @@
 #include <seqan/vcf_io/read_vcf.h>
 #include <seqan/vcf_io/write_vcf.h>
 
+#include <seqan/vcf_io/write_bcf.h>
+
 // TODO(singer): implement the stream
 //#include <seqan/vcf_io/vcf_stream.h>
 

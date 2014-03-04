@@ -363,10 +363,11 @@ readRecord(VcfRecord & record,
 
     // INFO
     readUntil(record.info, iter, IsWhitespace());
+    if (empty(record.info))
+        throw ParseError("Unexpected end of record.");
+
     if (IsNewline()(value(iter)))
     {
-        if (empty(record.info))
-            throw ParseError("Unexpected end of record.");
         skipOne(iter);
         return;
     }

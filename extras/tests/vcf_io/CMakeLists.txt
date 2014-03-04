@@ -31,7 +31,8 @@ add_definitions (${SEQAN_DEFINITIONS})
 # Update the list of file names below if you add source files to your test.
 add_executable (test_vcf_io
                 test_vcf_io.cpp
-                test_vcf_io.h)
+                test_vcf_io.h
+                test_bcf_io.h)
 
 # Add dependencies found by find_package (SeqAn).
 target_link_libraries (test_vcf_io ${SEQAN_LIBRARIES})
