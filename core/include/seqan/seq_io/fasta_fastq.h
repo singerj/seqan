@@ -216,10 +216,10 @@ inline void readRecord(TIdString & meta, TSeqString & seq, TQualString & qual, T
 template <typename TIdString, typename TSeqString, typename TFwdIterator>
 inline void readRecord(TIdString & meta, TSeqString & seq, TFwdIterator & iter, Fasta)
 {
-    typedef typename Value<TSeqString>::Type                        TAlphabet;
-    typedef Asserter<IsInAlphabet<TAlphabet>, ParseError, Fasta>    TAsserter;
-    typedef OrFunctor<IsWhitespace, TAsserter>                      TIgnoreOrAssert;
-    typedef EqualsChar<'>'>                                         TFastaBegin;
+    typedef typename Value<TSeqString>::Type                            TAlphabet;
+    typedef AssertFunctor<IsInAlphabet<TAlphabet>, ParseError, Fasta>   TAsserter;
+    typedef OrFunctor<IsWhitespace, TAsserter>                          TIgnoreOrAssert;
+    typedef EqualsChar<'>'>                                             TFastaBegin;
 
     clear(meta);
     clear(seq);
@@ -260,14 +260,14 @@ inline void readRecord(TIdString & meta, TSeqString & seq, TFwdIterator & iter, 
 template <typename TIdString, typename TSeqString, typename TQualString, typename TFwdIterator>
 inline void readRecord(TIdString & meta, TSeqString & seq, TQualString & qual, TFwdIterator & iter, Fastq)
 {
-    typedef typename Value<TSeqString>::Type                            TSeqAlphabet;
-    typedef typename Value<TQualString>::Type                           TQualAlphabet;
-    typedef Asserter<IsInAlphabet<TSeqAlphabet>, ParseError, Fastq>     TSeqAsserter;
-    typedef Asserter<IsInAlphabet<TQualAlphabet>, ParseError, Fastq>    TQualAsserter;
-    typedef OrFunctor<IsWhitespace, TSeqAsserter>                       TSeqIgnoreOrAssert;
-    typedef OrFunctor<IsBlank, TQualAsserter>                           TQualIgnoreOrAssert;
-    typedef EqualsChar<'@'>                                             TFastqBegin;
-    typedef EqualsChar<'+'>                                             TQualsBegin;
+    typedef typename Value<TSeqString>::Type                                TSeqAlphabet;
+    typedef typename Value<TQualString>::Type                               TQualAlphabet;
+    typedef AssertFunctor<IsInAlphabet<TSeqAlphabet>, ParseError, Fastq>    TSeqAsserter;
+    typedef AssertFunctor<IsInAlphabet<TQualAlphabet>, ParseError, Fastq>   TQualAsserter;
+    typedef OrFunctor<IsWhitespace, TSeqAsserter>                           TSeqIgnoreOrAssert;
+    typedef OrFunctor<IsBlank, TQualAsserter>                               TQualIgnoreOrAssert;
+    typedef EqualsChar<'@'>                                                 TFastqBegin;
+    typedef EqualsChar<'+'>                                                 TQualsBegin;
 
     clear(meta);
     clear(seq);

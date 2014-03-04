@@ -359,7 +359,7 @@ inline void readUntil(TTarget &target, TFwdIterator &iter, TStopFunctor &stopFun
 //TODO(singer): implement a chunked version!
 //TODO(singer): write test
 template <typename TTarget, typename TFwdIterator, typename TIgnoreFunctor>
-inline void readOne(TTarget & target, TFwdIterator &iter, TIgnoreFunctor const &ignoreFunctor)
+inline void readOne(TTarget & target, TFwdIterator &iter, TIgnoreFunctor &ignoreFunctor)
 {
     //readUntil(target, iter, CountDownFunctor<>(1), ignoreFunctor);
     if (atEnd(iter))
@@ -370,6 +370,13 @@ inline void readOne(TTarget & target, TFwdIterator &iter, TIgnoreFunctor const &
     asserter(*iter);
     target = *iter;
     ++iter;
+}
+
+template <typename TTarget, typename TFwdIterator, typename TIgnoreFunctor>
+inline void readOne(TTarget & target, TFwdIterator &iter, TIgnoreFunctor const &ignoreFunctor)
+{
+    TIgnoreFunctor func(ignoreFunctor);
+    readOne(target, iter, func);
 }
 
 template <typename TTarget, typename TFwdIterator>

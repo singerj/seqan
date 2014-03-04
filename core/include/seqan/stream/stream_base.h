@@ -316,8 +316,10 @@ inline void _write(TTarget &target, TFwdIterator &iter, TSize n, Range<TIValue*>
 // ----------------------------------------------------------------------------
 // NOTE(esiragusa): should it be defined for Streams and Containers?
 
+//TODO(singer): Enable this!
 template <typename TTarget, typename TValue, typename TSize>
-inline SEQAN_FUNC_ENABLE_IF(Or<Is<OutputStreamConcept<TTarget> >, Is<ContainerConcept<TTarget> > >, void)
+//inline SEQAN_FUNC_ENABLE_IF(Or<Is<OutputStreamConcept<TTarget> >, Is<ContainerConcept<TTarget> > >, void)
+inline void
 write(TTarget &target, TValue *ptr, TSize n)
 {
     typedef Range<TValue*>                          TRange;
