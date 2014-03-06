@@ -276,7 +276,7 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_header)
     appendValue(vcfHeader.sampleNames, "NA00002");
     appendValue(vcfHeader.sampleNames, "NA00003");
 
-    resize(vcfHeader.headerRecords, 18);
+    resize(vcfHeader.headerRecords, 20);
     vcfHeader.headerRecords[0].key = "fileformat";
     vcfHeader.headerRecords[0].value = "VCFv4.1";
     vcfHeader.headerRecords[1].key = "fileDate";
@@ -313,6 +313,10 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_header)
     vcfHeader.headerRecords[16].value = "<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">";
     vcfHeader.headerRecords[17].key = "FORMAT";
     vcfHeader.headerRecords[17].value = "<ID=HQ,Number=2,Type=Integer,Description=\"Haplotype Quality\">";
+    vcfHeader.headerRecords[18].key = "bcftools_viewVersion";
+    vcfHeader.headerRecords[18].value = "0.2.0-rc6-33-gbb821a3+htslib-0.2.0-rc6-27-g78e237b";
+    vcfHeader.headerRecords[19].key = "bcftools_viewCommand";
+    vcfHeader.headerRecords[19].value = "view -o ../../Desktop/example.bcf -O u ../../Desktop/example.vcf";
 
     seqan::VcfIOContext vcfIOContext(vcfHeader.sequenceNames, vcfHeader.sampleNames);
     seqan::String<char> outString;
@@ -329,17 +333,34 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_header)
     //seqan::Iterator<seqan::String<char, seqan::MMap<> >, seqan::Rooted>::Type iter = begin(inString);
     //read(vcfHeader, iter, vcfIOContextIn, seqan::Vcf());
 
-    for (unsigned i = 0; i < length(outString); ++i)
-        std::cerr << (int)outString[i] << " " << (int)inString[i] << std::endl;
+    /*
+    unsigned i = 0;
+    for (; i < length(outString); ++i)
+    {
+        std::cerr << i << "\t" << (int)outString[i] << " " << (int)inString[i] << " " << outString[i] << " " << inString[i] <<std::endl;
+        if ( (int)outString[i] != (int)inString[i])
+           break;
+    }
+    std::cerr << length(outString) << " " << length(inString) << std::endl;
+    for (; i < length(inString); ++i)
+    {
+        std::cerr << i << "\t" << " " << (int)inString[i] << " " << inString[i] <<std::endl;
+    }
+    */
 
     SEQAN_ASSERT_EQ(outString, inString);
 }
 
 
-SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_record)
+SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_records)
 {
     seqan::CharString vcfPath = SEQAN_PATH_TO_ROOT();
     append(vcfPath, "/extras/tests/vcf_io/example_records.vcf");
+
+    vcfPath = "/Users/jsinger/Desktop/example.vcf";
+    seqan::String<char, seqan::MMap<> > inString;
+    open(inString, toCString(vcfPath));
+
 
     seqan::String<char, seqan::MMap<> > mmapString;
     open(mmapString, toCString(vcfPath));
@@ -347,15 +368,26 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_record)
 
     seqan::VcfHeader vcfHeader;
     resize(vcfHeader.sampleNames, 3);
+    open(mmapString, toCString(vcfPath));
+    seqan::Iterator<seqan::String<char, seqan::MMap<> >, seqan::Rooted>::Type iter = begin(mmapString);
+
+    seqan::VcfHeader vcfHeader;
+    seqan::VcfIOContext vcfIOContext(vcfHeader.sequenceNames, vcfHeader.sampleNames);
+
+    read(vcfHeader, iter, vcfIOContext, seqan::Vcf());
+
     seqan::VcfIOContext vcfIOContext(vcfHeader.sequenceNames, vcfHeader.sampleNames);
 
     seqan::String<char> outString;
+    String<VcfRecord> records;
     while (!atEnd(iter))
     {
         seqan::VcfRecord record;
         readRecord(record, iter, vcfIOContext, seqan::Vcf());
-        writeRecord(outString, record, vcfIOContext, seqan::Vcf());
+        appendValue(records, record);
     }
+
+    write(outString, vcfHeader, records, seqan::Bcf());
 
     SEQAN_ASSERT_EQ(outString, mmapString);
 }

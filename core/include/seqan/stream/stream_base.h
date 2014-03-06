@@ -356,9 +356,9 @@ write(TTarget &target, TFwdIterator &iter, TSize n)
 template <typename TTarget, typename TContainer>
 //inline SEQAN_FUNC_ENABLE_IF(Is<ContainerConcept<TTarget> >, void)
 inline void
-write(TTarget &target, TContainer &cont)
+write(TTarget &target, TContainer const &cont)
 {
-    typename Iterator<TContainer, Rooted>::Type iter = begin(cont, Rooted());
+    typename Iterator<TContainer const, Rooted>::Type iter = begin(cont, Rooted());
     write(target, iter, length(cont));
 }
 
@@ -380,9 +380,9 @@ inline TSize read(TTarget &target, TFwdIterator &iter, TSize n)
 // ----------------------------------------------------------------------------
 
 template <typename TTarget, typename TContainer>
-inline void read(TTarget &target, TContainer &cont)
+inline void read(TTarget &target, TContainer const &cont)
 {
-    typename Iterator<TContainer, Rooted>::Type iter = begin(cont, Rooted());
+    typename Iterator<TContainer const, Rooted>::Type iter = begin(cont, Rooted());
     read(target, iter, length(cont));
 }
 

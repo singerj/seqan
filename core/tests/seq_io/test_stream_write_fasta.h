@@ -65,8 +65,11 @@ SEQAN_DEFINE_TEST(test_stream_write_record_fasta_no_empty_lines)
 {
     using namespace seqan;
 
+    /*
     char buffer[1000];
     Stream<CharArray<char *> > outStream(&buffer[0], &buffer[0] + 1000);
+    */
+    String<char> out;
 
     CharString meta1 = "meta1";
     CharString meta2 = "meta2";
@@ -77,9 +80,8 @@ SEQAN_DEFINE_TEST(test_stream_write_record_fasta_no_empty_lines)
     SequenceOutputOptions options;
     options.lineLength = 10;
 
-    SEQAN_ASSERT_EQ(writeRecord(outStream, meta1, seq1, Fasta(), options), 0);
-    SEQAN_ASSERT_EQ(writeRecord(outStream, meta2, seq2, Fasta(), options), 0);
-    streamPut(outStream, '\0');
+    writeRecord(out, meta1, seq1, Fasta(), options);
+    writeRecord(out, meta2, seq2, Fasta(), options);
 
     char const * EXPECTED =
             ">meta1\n"
@@ -87,7 +89,7 @@ SEQAN_DEFINE_TEST(test_stream_write_record_fasta_no_empty_lines)
             "CCCAAATTTN\n"
             ">meta2\n"
             "CGATN\n";
-    SEQAN_ASSERT_EQ(CharString(buffer), CharString(EXPECTED));
+    SEQAN_ASSERT_EQ(out, CharString(EXPECTED));
 }
 
 SEQAN_DEFINE_TEST(test_stream_write_record_fasta_nolinebreaks)

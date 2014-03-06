@@ -91,6 +91,103 @@ typedef Tag<Bcf_> Bcf;
 ..include:seqan/vcf_io.h
 */
 
+template <typename TTarget, typename TBcfValueType>
+void _getBcfDictionaryId(TTarget & target, TBcfValueType const & bcfValue)
+{
+    typename Iterator<TBcfValueType const>::Type it = begin(bcfValue);
+    clear(target);
+    for (; !atEnd(it); ++it)
+        if (value(it) == '=')
+        {
+            ++it;
+            for (; value(it) != ','; ++it)
+                writeValue(target, value(it));
+            return;
+        }
+}
+
+template <typename TTarget>
+void
+_write(TTarget & target,
+      VcfHeader const & header,
+      VcfIOContext const & vcfIOContextTag,
+      StringSet<String<char> > & contigNameStore,
+      NameStoreCache<StringSet<String<char> > > & contigNameStoreCache,
+      StringSet<String<char> > & restNameStore,
+      NameStoreCache<StringSet<String<char> > > & restNameStoreCache,
+      Bcf const & /*tag*/)
+{
+    typedef Size<VcfHeader>::Type       TSize;
+
+    write(target, "BCF\2\2");
+
+    // create the header including ids for contigs on the one side and 
+    // INFO, FORMAT and FILTER on the other side
+    String<char> vcfHeader;
+    String<char> tempId;
+    unsigned int contigId = 0;
+
+    write(vcfHeader, "##");
+    write(vcfHeader, header.headerRecords[0].key);
+    writeValue(vcfHeader, '=');
+    write(vcfHeader, header.headerRecords[0].value);
+    writeValue(vcfHeader, '\n');
+
+    if (header.headerRecords[0].key != "FILTER" || prefix(header.headerRecords[0].value, 9) != "<ID=PASS")
+    {
+        write(vcfHeader, "##FILTER=<ID=PASS,Description=\"All filters passed\",IDX=0>\n");
+        appendName(restNameStore, "PASS", restNameStoreCache);
+        refresh(restNameStoreCache);
+    }
+
+    for (TSize i = 1; i < length(header.headerRecords); ++i)
+    {
+        write(vcfHeader, "##");
+        write(vcfHeader, header.headerRecords[i].key);
+        writeValue(vcfHeader, '=');
+        write(vcfHeader, header.headerRecords[i].value);
+        if (header.headerRecords[i].key == "contig")
+        {
+            _getBcfDictionaryId(tempId, header.headerRecords[i].value);
+            appendName(contigNameStore, tempId, contigNameStoreCache);
+            back(vcfHeader) = ',';
+            write(vcfHeader, "IDX=");
+            appendNumber(vcfHeader, contigId);
+            writeValue(vcfHeader, '>');
+            ++contigId;
+        }
+        else if (header.headerRecords[i].key == "INFO" ||
+                 header.headerRecords[i].key == "FORMAT" ||
+                 header.headerRecords[i].key == "FILTER")
+        {
+            unsigned int idx;
+            _getBcfDictionaryId(tempId, header.headerRecords[i].value);
+            if (!getIdByName(restNameStore, tempId, idx, restNameStoreCache))
+            {
+                appendName(restNameStore, tempId, restNameStoreCache);
+                refresh(restNameStoreCache);
+                idx = length(restNameStore) - 1;
+                back(vcfHeader) = ',';
+                write(vcfHeader, "IDX=");
+                appendNumber(vcfHeader, idx);
+                write(vcfHeader, '>');
+            }
+        }
+        writeValue(vcfHeader, '\n');
+    }
+
+    write(vcfHeader, "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT");
+    for (unsigned i = 0; i < length(header.sampleNames); ++i)
+    {
+        writeValue(vcfHeader, '\t');
+        write(vcfHeader, header.sampleNames[i]);
+    }
+    writeValue(vcfHeader, '\n');
+    writeValue(vcfHeader, '\0');
+    appendRawPod(target, (__uint32)length(vcfHeader));
+    write(target, vcfHeader);
+}
+
 template <typename TTarget>
 void
 write(TTarget & target,
@@ -98,31 +195,19 @@ write(TTarget & target,
       VcfIOContext const & vcfIOContextTag,
       Bcf const & /*tag*/)
 {
-    write(target, "BCF\2\2");
-    String<char> vcfHeader;
-    write(vcfHeader, header, vcfIOContextTag, Vcf());
-    appendValue(vcfHeader, '\0');
-    appendRawPod(target, (__uint32)length(vcfHeader));
-    write(target, vcfHeader);
-    /*
-    for (unsigned i = 0; i < length(header.headerRecords); ++i)
-    {
-        write(target, "##");
-        write(target, header.headerRecords[i].key);
-        writeValue(target, '=');
-        write(target, header.headerRecords[i].value);
-        writeValue(target, '\n');
-    }
+    typedef StringSet<String<char> >    TNameStore;
+    typedef NameStoreCache<TNameStore>  TNameStoreCache;
 
-    write(target, "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT");
-    for (unsigned i = 0; i < length(header.sampleNames); ++i)
-    {
-        writeValue(target, '\t');
-        write(target, header.sampleNames[i]);
-    }
-    writeValue(target, '\n');
-    */
+    TNameStore contigNameStore;
+    TNameStoreCache contigNameStoreCache(contigNameStore);
+
+    TNameStore restNameStore;
+    TNameStoreCache restNameStoreCache(restNameStore);
+
+    _write(target, header, vcfIOContextTag, contigNameStore, contigNameStoreCache, restNameStore, restNameStoreCache, Bcf());
 }
+
+
 
 // ----------------------------------------------------------------------------
 // Function writeRecord()                                           [VcfRecord]
@@ -159,12 +244,23 @@ write(TTarget & target,
 */
 
 template <typename TTarget>
-void 
-writeRecord(TTarget & target,
-           VcfRecord const & record,
-           VcfIOContext const & vcfIOContext,
-           Bcf const & /*tag*/)
+void
+_writeRecord(TTarget & target,
+             VcfRecord const & record,
+             VcfIOContext const & vcfIOContext,
+             StringSet<String<char> > & contigNameStore,
+             NameStoreCache<StringSet<String<char> > > & contigNameStoreCache,
+             StringSet<String<char> > & restNameStore,
+             NameStoreCache<StringSet<String<char> > > & restNameStoreCache,
+             Bcf const & /*tag*/)
 {
+    String<char> buffer;
+    __int32 idx;
+    appendRawPod(target, (__uint32)length(buffer));
+    appendRawPod(target, (__uint32)length(buffer));
+    getIdByName(contigNameStore, vcfIOContext.sequenceNames[record.rID], idx, contigNameStoreCache);
+    appendRawPod(target, idx);
+
     /*
     write(target, (*vcfIOContext.sequenceNames)[record.rID]);
     writeValue(target, '\t');
@@ -214,6 +310,31 @@ writeRecord(TTarget & target,
     }
     writeValue(target, '\n');
     */
+}
+
+// TODO(singer): VcfHeader not const because VcfIOContext can not handle it
+template <typename TTarget, typename TRecord>
+void
+write(TTarget & target,
+      VcfHeader & header,
+      String<TRecord> const & records,
+      Bcf const & /*tag*/)
+{
+    typedef StringSet<String<char> >    TNameStore;
+    typedef NameStoreCache<TNameStore>  TNameStoreCache;
+
+    TNameStore contigNameStore;
+    TNameStoreCache contigNameStoreCache(contigNameStore);
+
+    TNameStore restNameStore;
+    TNameStoreCache restNameStoreCache(restNameStore);
+
+    seqan::VcfIOContext vcfIOContext(header.sequenceNames, header.sampleNames);
+
+    _write(target, header, vcfIOContext, contigNameStore, contigNameStoreCache, restNameStore, restNameStoreCache, Bcf());
+    for (unsigned i = 0; i < length(records); ++i)
+        _write(target, records[i], vcfIOContext, contigNameStore, contigNameStoreCache, restNameStore, restNameStoreCache, Bcf());
+
 }
 
 }  // namespace seqan
