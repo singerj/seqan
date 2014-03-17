@@ -276,47 +276,50 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_header)
     appendValue(vcfHeader.sampleNames, "NA00002");
     appendValue(vcfHeader.sampleNames, "NA00003");
 
-    resize(vcfHeader.headerRecords, 20);
+    resize(vcfHeader.headerRecords, 21);
+
     vcfHeader.headerRecords[0].key = "fileformat";
     vcfHeader.headerRecords[0].value = "VCFv4.1";
-    vcfHeader.headerRecords[1].key = "fileDate";
-    vcfHeader.headerRecords[1].value = "20090805";
-    vcfHeader.headerRecords[2].key = "source";
-    vcfHeader.headerRecords[2].value = "myImputationProgramV3.1";
-    vcfHeader.headerRecords[3].key = "reference";
-    vcfHeader.headerRecords[3].value = "file:///seq/references/1000GenomesPilot-NCBI36.fasta";
-    vcfHeader.headerRecords[4].key = "contig";
-    vcfHeader.headerRecords[4].value = "<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species=\"Homo sapiens\",taxonomy=x>";
-    vcfHeader.headerRecords[5].key = "phasing";
-    vcfHeader.headerRecords[5].value = "partial";
-    vcfHeader.headerRecords[6].key = "INFO";
-    vcfHeader.headerRecords[6].value = "<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">";
+    vcfHeader.headerRecords[1].key = "FILTER";
+    vcfHeader.headerRecords[1].value = "<ID=PASS,Description=\"All filters passed\">";
+    vcfHeader.headerRecords[2].key = "fileDate";
+    vcfHeader.headerRecords[2].value = "20090805";
+    vcfHeader.headerRecords[3].key = "source";
+    vcfHeader.headerRecords[3].value = "myImputationProgramV3.1";
+    vcfHeader.headerRecords[4].key = "reference";
+    vcfHeader.headerRecords[4].value = "file:///seq/references/1000GenomesPilot-NCBI36.fasta";
+    vcfHeader.headerRecords[5].key = "contig";
+    vcfHeader.headerRecords[5].value = "<ID=20,length=62435964,assembly=B36,md5=f126cdf8a6e0c7f379d618ff66beb2da,species=\"Homo sapiens\",taxonomy=x>";
+    vcfHeader.headerRecords[6].key = "phasing";
+    vcfHeader.headerRecords[6].value = "partial";
     vcfHeader.headerRecords[7].key = "INFO";
-    vcfHeader.headerRecords[7].value = "<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">";
+    vcfHeader.headerRecords[7].value = "<ID=NS,Number=1,Type=Integer,Description=\"Number of Samples With Data\">";
     vcfHeader.headerRecords[8].key = "INFO";
-    vcfHeader.headerRecords[8].value = "<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">";
+    vcfHeader.headerRecords[8].value = "<ID=DP,Number=1,Type=Integer,Description=\"Total Depth\">";
     vcfHeader.headerRecords[9].key = "INFO";
-    vcfHeader.headerRecords[9].value = "<ID=AA,Number=1,Type=String,Description=\"Ancestral Allele\">";
+    vcfHeader.headerRecords[9].value = "<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">";
     vcfHeader.headerRecords[10].key = "INFO";
-    vcfHeader.headerRecords[10].value = "<ID=DB,Number=0,Type=Flag,Description=\"dbSNP membership, build 129\">";
+    vcfHeader.headerRecords[10].value = "<ID=AA,Number=1,Type=String,Description=\"Ancestral Allele\">";
     vcfHeader.headerRecords[11].key = "INFO";
-    vcfHeader.headerRecords[11].value = "<ID=H2,Number=0,Type=Flag,Description=\"HapMap2 membership\">";
-    vcfHeader.headerRecords[12].key = "FILTER";
-    vcfHeader.headerRecords[12].value = "<ID=q10,Description=\"Quality below 10\">";
+    vcfHeader.headerRecords[11].value = "<ID=DB,Number=0,Type=Flag,Description=\"dbSNP membership, build 129\">";
+    vcfHeader.headerRecords[12].key = "INFO";
+    vcfHeader.headerRecords[12].value = "<ID=H2,Number=0,Type=Flag,Description=\"HapMap2 membership\">";
     vcfHeader.headerRecords[13].key = "FILTER";
-    vcfHeader.headerRecords[13].value = "<ID=s50,Description=\"Less than 50% of samples have data\">";
-    vcfHeader.headerRecords[14].key = "FORMAT";
-    vcfHeader.headerRecords[14].value = "<ID=GT,Number=1,Type=String,Description=\"Genotype\">";
+    vcfHeader.headerRecords[13].value = "<ID=q10,Description=\"Quality below 10\">";
+    vcfHeader.headerRecords[14].key = "FILTER";
+    vcfHeader.headerRecords[14].value = "<ID=s50,Description=\"Less than 50% of samples have data\">";
     vcfHeader.headerRecords[15].key = "FORMAT";
-    vcfHeader.headerRecords[15].value = "<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">";
+    vcfHeader.headerRecords[15].value = "<ID=GT,Number=1,Type=String,Description=\"Genotype\">";
     vcfHeader.headerRecords[16].key = "FORMAT";
-    vcfHeader.headerRecords[16].value = "<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">";
+    vcfHeader.headerRecords[16].value = "<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">";
     vcfHeader.headerRecords[17].key = "FORMAT";
-    vcfHeader.headerRecords[17].value = "<ID=HQ,Number=2,Type=Integer,Description=\"Haplotype Quality\">";
-    vcfHeader.headerRecords[18].key = "bcftools_viewVersion";
-    vcfHeader.headerRecords[18].value = "0.2.0-rc6-33-gbb821a3+htslib-0.2.0-rc6-27-g78e237b";
-    vcfHeader.headerRecords[19].key = "bcftools_viewCommand";
-    vcfHeader.headerRecords[19].value = "view -o ../../Desktop/example.bcf -O u ../../Desktop/example.vcf";
+    vcfHeader.headerRecords[17].value = "<ID=DP,Number=1,Type=Integer,Description=\"Read Depth\">";
+    vcfHeader.headerRecords[18].key = "FORMAT";
+    vcfHeader.headerRecords[18].value = "<ID=HQ,Number=2,Type=Integer,Description=\"Haplotype Quality\">";
+    vcfHeader.headerRecords[19].key = "bcftools_viewVersion";
+    vcfHeader.headerRecords[19].value = "0.2.0-rc6-33-gbb821a3+htslib-0.2.0-rc6-27-g78e237b";
+    vcfHeader.headerRecords[20].key = "bcftools_viewCommand";
+    vcfHeader.headerRecords[20].value = "view -o ../../Desktop/example.bcf -O u ../../Desktop/example.vcf";
 
     seqan::VcfIOContext vcfIOContext(vcfHeader.sequenceNames, vcfHeader.sampleNames);
     seqan::String<char> outString;
@@ -333,20 +336,20 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_header)
     //seqan::Iterator<seqan::String<char, seqan::MMap<> >, seqan::Rooted>::Type iter = begin(inString);
     //read(vcfHeader, iter, vcfIOContextIn, seqan::Vcf());
 
-    /*
+    
     unsigned i = 0;
     for (; i < length(outString); ++i)
     {
         std::cerr << i << "\t" << (int)outString[i] << " " << (int)inString[i] << " " << outString[i] << " " << inString[i] <<std::endl;
-        if ( (int)outString[i] != (int)inString[i])
-           break;
+        //if ( (int)outString[i] != (int)inString[i])
+           //break;
     }
     std::cerr << length(outString) << " " << length(inString) << std::endl;
     for (; i < length(inString); ++i)
     {
         std::cerr << i << "\t" << " " << (int)inString[i] << " " << inString[i] <<std::endl;
     }
-    */
+    
 
     SEQAN_ASSERT_EQ(outString, inString);
 }
@@ -357,7 +360,8 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_records)
     seqan::CharString vcfPath = SEQAN_PATH_TO_ROOT();
     append(vcfPath, "/extras/tests/vcf_io/example_records.vcf");
 
-    vcfPath = "/home/jochen/Desktop/example.vcf";
+    vcfPath = "/Users/jsinger/Desktop/example.vcf";
+
     seqan::String<char, seqan::MMap<> > inString;
     open(inString, toCString(vcfPath));
 
@@ -381,7 +385,7 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_records)
     }
 
     seqan::String<char, seqan::MMap<> > bcfIn;
-    open(bcfIn, "/home/jochen/Desktop/example.bcf");
+    open(bcfIn, "/Users/jsinger/Desktop/example.bcf");
 
     write(outString, vcfHeader, records, seqan::Bcf());
 

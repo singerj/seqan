@@ -127,20 +127,20 @@ _write(TTarget & target,
     String<char> tempId;
     unsigned int contigId = 0;
 
-    write(vcfHeader, "##");
-    write(vcfHeader, header.headerRecords[0].key);
-    writeValue(vcfHeader, '=');
-    write(vcfHeader, header.headerRecords[0].value);
-    writeValue(vcfHeader, '\n');
+    //write(vcfHeader, "##");
+    //write(vcfHeader, header.headerRecords[0].key);
+    //writeValue(vcfHeader, '=');
+    //write(vcfHeader, header.headerRecords[0].value);
+    //writeValue(vcfHeader, '\n');
 
-    if (header.headerRecords[0].key != "FILTER" || prefix(header.headerRecords[0].value, 9) != "<ID=PASS")
+    /*if (header.headerRecords[0].key != "FILTER" || prefix(header.headerRecords[0].value, 9) != "<ID=PASS")
     {
         write(vcfHeader, "##FILTER=<ID=PASS,Description=\"All filters passed\",IDX=0>\n");
         appendName(restNameStore, "PASS", restNameStoreCache);
         refresh(restNameStoreCache);
-    }
+    }*/
 
-    for (TSize i = 1; i < length(header.headerRecords); ++i)
+    for (TSize i = 0; i < length(header.headerRecords); ++i)
     {
         write(vcfHeader, "##");
         write(vcfHeader, header.headerRecords[i].key);
@@ -268,27 +268,78 @@ _write(TTarget & target,
 {
     String<char> buffer;
     __int32 idx;
+    
+    // l_shared
     appendRawPod(target, (__uint32)length(buffer));
+    
+    // l_indiv
     appendRawPod(target, (__uint32)length(buffer));
+    
+    // CHROM
     getIdByName(contigNameStore, (*vcfIOContext.sequenceNames)[record.rID], idx, contigNameStoreCache);
     std::cerr << idx << " " << toCString((*vcfIOContext.sequenceNames)[record.rID]) << std::endl;
     appendRawPod(target, idx);
+    
+    // POS
     appendRawPod(target, record.beginPos);
+    
+    // rlen
     appendRawPod(target, (__int32)length(record.ref));
+    
+    // QUAL
     appendRawPod(target, record.qual);
+    
+    // n_allele_info
     idx = (_countEntriesAlt(record.ref) + _countEntriesAlt(record.alt)) << 16 | _countEntriesAlt(record.info);
     appendRawPod(target, idx);
+    
+    // n_fmt_sample
     idx = _countEntriesAlt(record.format) << 24 | length(record.genotypeInfos);
     appendRawPod(target, idx);
-    int bla = -105;
+    
+    // ID
+    int bla = -105; // dont know why, but this is included in the bcftools of samtools
     appendRawPod(target, (char)(bla));
     write(target, record.id);
+    
+    // allele
+    bla = 23; // dont know why, but this is included in the bcftools of samtools
+    appendRawPod(target, (char)(bla));
+    write(target, record.ref);
+    bla = 23; // dont know why, but this is included in the bcftools of samtools
+    appendRawPod(target, (char)(bla));
+    write(target, record.alt);
 
-/*    std::cerr << (__int32)length(record.ref) << " " << toCString(record.ref) << std::endl;
+    // filter info
+    // split the filter info
+    StringSet<String<char> > dummy;
+    splitString(dummy, record.filter, ';', '"'); 
+    for (unsigned i = 0; i < length(dummy); ++i)
+    {
+        bla = 17; // dont know why, but this is included in the bcftools of samtools
+        appendRawPod(target, (char)(bla));
+        getIdByName(restNameStore, dummy[i], idx, restNameStoreCache);
+        appendRawPod(target, (__int8)idx);
+    }
+
+    // filter info
+    // split the filter info
+    splitString(dummy, record.info, ';', '"'); 
+    for (unsigned i = 0; i < length(dummy); ++i)
+    {
+        bla = 17; // dont know why, but this is included in the bcftools of samtools
+        appendRawPod(target, (char)(bla));
+        getIdByName(restNameStore, dummy[i], idx, restNameStoreCache);
+        appendRawPod(target, (__int8)idx);
+    }
+
+
+    //bla = 17; // dont know why, but this is included in the bcftools of samtools
+    //appendRawPod(target, (char)(bla));
+    
     char c;
     std::cin>>c;
     std::cerr << std::endl;
-*/
     /*
     write(target, (*vcfIOContext.sequenceNames)[record.rID]);
     writeValue(target, '\t');
