@@ -357,7 +357,7 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_records)
     seqan::CharString vcfPath = SEQAN_PATH_TO_ROOT();
     append(vcfPath, "/extras/tests/vcf_io/example_records.vcf");
 
-    vcfPath = "/Users/jsinger/Desktop/example.vcf";
+    vcfPath = "/home/jochen/Desktop/example.vcf";
     seqan::String<char, seqan::MMap<> > inString;
     open(inString, toCString(vcfPath));
 
@@ -367,19 +367,12 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_records)
     seqan::Iterator<seqan::String<char, seqan::MMap<> >, seqan::Rooted>::Type iter = begin(mmapString);
 
     seqan::VcfHeader vcfHeader;
-    resize(vcfHeader.sampleNames, 3);
-    open(mmapString, toCString(vcfPath));
-    seqan::Iterator<seqan::String<char, seqan::MMap<> >, seqan::Rooted>::Type iter = begin(mmapString);
-
-    seqan::VcfHeader vcfHeader;
     seqan::VcfIOContext vcfIOContext(vcfHeader.sequenceNames, vcfHeader.sampleNames);
 
     read(vcfHeader, iter, vcfIOContext, seqan::Vcf());
 
-    seqan::VcfIOContext vcfIOContext(vcfHeader.sequenceNames, vcfHeader.sampleNames);
-
     seqan::String<char> outString;
-    String<VcfRecord> records;
+    seqan::String<seqan::VcfRecord> records;
     while (!atEnd(iter))
     {
         seqan::VcfRecord record;
@@ -387,7 +380,13 @@ SEQAN_DEFINE_TEST(test_vcf_io_write_bcf_records)
         appendValue(records, record);
     }
 
+    seqan::String<char, seqan::MMap<> > bcfIn;
+    open(bcfIn, "/home/jochen/Desktop/example.bcf");
+
     write(outString, vcfHeader, records, seqan::Bcf());
+
+    for (unsigned i = 0; i < length(outString); ++i)
+        std::cerr << i << " " << (int)outString[i] << " " << (int)bcfIn[i] << " " << outString[i] << " " << bcfIn[i] << std::endl;
 
     SEQAN_ASSERT_EQ(outString, mmapString);
 }

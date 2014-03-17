@@ -243,9 +243,21 @@ write(TTarget & target,
 ..include:seqan/vcf_io.h
 */
 
+template <typename TSequence>
+unsigned int _countEntriesAlt(TSequence const & seq)
+{
+    unsigned counter = 0;
+    for (unsigned i = 0; i < length(seq); ++i)
+        if (seq[i] == ',' || seq[i] == ';' || seq[i] == ':')
+            ++counter;
+
+    if (back(seq) == ',' || back(seq) == ';' || back(seq) == ':')
+        return counter;
+    return counter + 1;
+}
 template <typename TTarget>
 void
-_writeRecord(TTarget & target,
+_write(TTarget & target,
              VcfRecord const & record,
              VcfIOContext const & vcfIOContext,
              StringSet<String<char> > & contigNameStore,
@@ -258,9 +270,25 @@ _writeRecord(TTarget & target,
     __int32 idx;
     appendRawPod(target, (__uint32)length(buffer));
     appendRawPod(target, (__uint32)length(buffer));
-    getIdByName(contigNameStore, vcfIOContext.sequenceNames[record.rID], idx, contigNameStoreCache);
+    getIdByName(contigNameStore, (*vcfIOContext.sequenceNames)[record.rID], idx, contigNameStoreCache);
+    std::cerr << idx << " " << toCString((*vcfIOContext.sequenceNames)[record.rID]) << std::endl;
     appendRawPod(target, idx);
+    appendRawPod(target, record.beginPos);
+    appendRawPod(target, (__int32)length(record.ref));
+    appendRawPod(target, record.qual);
+    idx = (_countEntriesAlt(record.ref) + _countEntriesAlt(record.alt)) << 16 | _countEntriesAlt(record.info);
+    appendRawPod(target, idx);
+    idx = _countEntriesAlt(record.format) << 24 | length(record.genotypeInfos);
+    appendRawPod(target, idx);
+    int bla = -105;
+    appendRawPod(target, (char)(bla));
+    write(target, record.id);
 
+/*    std::cerr << (__int32)length(record.ref) << " " << toCString(record.ref) << std::endl;
+    char c;
+    std::cin>>c;
+    std::cerr << std::endl;
+*/
     /*
     write(target, (*vcfIOContext.sequenceNames)[record.rID]);
     writeValue(target, '\t');
