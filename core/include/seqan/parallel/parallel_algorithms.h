@@ -112,9 +112,9 @@ template <typename TSequence>
 inline typename Value<TSequence>::Type
 sum(TSequence const &seq, Serial)
 {
-    register typename Iterator<TSequence const>::Type it = begin(seq, Standard());
-    register typename Iterator<TSequence const>::Type itEnd = end(seq, Standard());
-    register typename Value<TSequence>::Type sum = 0;
+    typename Iterator<TSequence const>::Type it = begin(seq, Standard());
+    typename Iterator<TSequence const>::Type itEnd = end(seq, Standard());
+    typename Value<TSequence>::Type sum = 0;
     for (; it != itEnd; ++it)
         sum += *it;
     return sum;
@@ -126,7 +126,7 @@ sum(TSequence const &seq, Tag<TParallelTag> parallelTag)
 {
     Splitter<typename Size<TSequence>::Type> splitter(0, length(seq), parallelTag);
 
-    register typename Value<TSequence>::Type threadSum = 0;
+    typename Value<TSequence>::Type threadSum = 0;
     SEQAN_OMP_PRAGMA(parallel for reduction(+:threadSum))
     for (int job = 0; job < (int)length(splitter); ++job)
         threadSum += sum(infix(seq, splitter[job], splitter[job + 1]), Serial());
@@ -218,10 +218,10 @@ partialSum(TTarget &target, TSource const &source, Tag<TParallelTag> parallelTag
     SEQAN_OMP_PRAGMA(parallel for)
     for (int job = 0; job < (int)length(splitter); ++job)
     {
-        register TConstIterator it = begin(source, Standard()) + splitter[job];
-        register TConstIterator itEnd = begin(source, Standard()) + splitter[job + 1];
-        register TIterator dstIt = begin(target, Standard()) + splitter[job];
-        register TValue sum = localSums[job];
+        TConstIterator it = begin(source, Standard()) + splitter[job];
+        TConstIterator itEnd = begin(source, Standard()) + splitter[job + 1];
+        TIterator dstIt = begin(target, Standard()) + splitter[job];
+        TValue sum = localSums[job];
         for (; it != itEnd; ++it, ++dstIt)
         {
             sum += *it;
@@ -233,11 +233,25 @@ partialSum(TTarget &target, TSource const &source, Tag<TParallelTag> parallelTag
     return back(localSums);
 }
 
+template <typename TTarget, typename TParallelTag>
+inline typename Value<TTarget>::Type
+partialSum(TTarget & target, Tag<TParallelTag> parallelTag)
+{
+    return partialSum(target, target, parallelTag);
+}
+
 template <typename TTarget, typename TSource>
 inline typename Value<TSource>::Type
-partialSum(TTarget &target, TSource const &source)
+partialSum(TTarget & target, TSource const & source)
 {
     return partialSum(target, source, Serial());
+}
+
+template <typename TTarget>
+inline typename Value<TTarget>::Type
+partialSum(TTarget & target)
+{
+    return partialSum(target, target);
 }
 
 // ----------------------------------------------------------------------------
@@ -245,10 +259,10 @@ partialSum(TTarget &target, TSource const &source)
 // ----------------------------------------------------------------------------
 
 template <typename TContainer, typename TFunctor, typename TIterTag, typename TParallelTag>
-inline void iterate(TContainer const & c, TFunctor f, Tag<TIterTag> const & iterTag, Tag<TParallelTag> const & /* tag */)
+inline void iterate(TContainer & c, TFunctor f, Tag<TIterTag> const & iterTag, Tag<TParallelTag> const & /* tag */)
 {
     typedef Tag<TIterTag> const                                     TIterSpec;
-    typedef typename Iterator<TContainer const, TIterSpec>::Type    TIter;
+    typedef typename Iterator<TContainer, TIterSpec>::Type          TIter;
 
     for (TIter it = begin(c, iterTag); !atEnd(it, c); ++it)
         f(it);
@@ -259,11 +273,11 @@ inline void iterate(TContainer const & c, TFunctor f, Tag<TIterTag> const & iter
 // ----------------------------------------------------------------------------
 
 template <typename TContainer, typename TFunctor, typename TIterTag>
-inline void iterate(TContainer const & c, TFunctor f, Tag<TIterTag> const & iterTag, Parallel)
+inline void iterate(TContainer & c, TFunctor f, Tag<TIterTag> const & iterTag, Parallel)
 {
     typedef Tag<TIterTag> const                                     TIterSpec;
-    typedef typename Position<TContainer const>::Type               TPos;
-    typedef typename Iterator<TContainer const, TIterSpec>::Type    TIter;
+    typedef typename Position<TContainer>::Type                     TPos;
+    typedef typename Iterator<TContainer, TIterSpec>::Type          TIter;
 
     Splitter<TPos> splitter(0, length(c), Parallel());
 
@@ -283,24 +297,44 @@ inline void iterate(TContainer const & c, TFunctor f, Tag<TIterTag> const & iter
 // ----------------------------------------------------------------------------
 
 template <typename TContainer, typename TFunctor>
-inline void iterate(TContainer const & c, TFunctor f)
+inline void iterate(TContainer & c, TFunctor f)
 {
-    iterate(c, f, typename DefaultIteratorSpec<TContainer const>::Type(), Serial());
+    iterate(c, f, typename DefaultIteratorSpec<TContainer>::Type(), Serial());
 }
 
 // ============================================================================
 // STL Wrappers
 // ============================================================================
 
-// ----------------------------------------------------------------------------
-// Function forEach()
-// ----------------------------------------------------------------------------
+template <typename TContainer, typename TFunctor, typename TParallelTag>
+inline TFunctor
+forEach(TContainer & c, TFunctor f, Tag<TParallelTag> const & /* tag */)
+{
+    return std::for_each(begin(c, Standard()), end(c, Standard()), f);
+}
 
 template <typename TContainer, typename TFunctor, typename TParallelTag>
 inline TFunctor
 forEach(TContainer const & c, TFunctor f, Tag<TParallelTag> const & /* tag */)
 {
     return std::for_each(begin(c, Standard()), end(c, Standard()), f);
+}
+
+// ----------------------------------------------------------------------------
+// Function transform()
+// ----------------------------------------------------------------------------
+
+template <typename TTarget, typename TSource, typename TUnaryOperator, typename TParallelTag>
+inline void transform(TTarget & target, TSource & source, TUnaryOperator o, Tag<TParallelTag> const & /* tag */)
+{
+    SEQAN_ASSERT_GEQ(length(target), length(source));
+    std::transform(begin(source, Standard()), end(source, Standard()), begin(target, Standard()), o);
+}
+
+template <typename TContainer, typename TUnaryOperator, typename TParallelTag>
+inline void transform(TContainer & c, TUnaryOperator o, Tag<TParallelTag> const & tag)
+{
+    transform(c, c, o, tag);
 }
 
 // ----------------------------------------------------------------------------
@@ -357,20 +391,6 @@ inline void stableSort(TContainer & c, Tag<TParallelTag> const & /* tag */)
     return std::stable_sort(begin(c, Standard()), end(c, Standard()));
 }
 
-// ----------------------------------------------------------------------------
-// Function transform()
-// ----------------------------------------------------------------------------
-
-//template <typename TContainer, typename TUnaryOperator, typename TParallelTag>
-//inline void
-//transform(TContainer & c, TUnaryOperator o, Tag<TParallelTag> const & /* tag */)
-//{
-//    std::transform(begin(c, Standard()),
-//                   end(c, Standard()),
-//                   begin(c, Standard()),
-//                   o);
-//}
-
 // ============================================================================
 // MCSTL Wrappers
 // ============================================================================
@@ -383,9 +403,26 @@ inline void stableSort(TContainer & c, Tag<TParallelTag> const & /* tag */)
 // ----------------------------------------------------------------------------
 
 template <typename TContainer, typename TFunctor>
+inline TFunctor forEach(TContainer & c, TFunctor f, Parallel)
+{
+    return __gnu_parallel::for_each(begin(c, Standard()), end(c, Standard()), f);
+}
+
+template <typename TContainer, typename TFunctor>
 inline TFunctor forEach(TContainer const & c, TFunctor f, Parallel)
 {
     return __gnu_parallel::for_each(begin(c, Standard()), end(c, Standard()), f);
+}
+
+// ----------------------------------------------------------------------------
+// Function transform(Parallel)
+// ----------------------------------------------------------------------------
+
+template <typename TTarget, typename TSource, typename TUnaryOperator>
+inline void transform(TTarget & target, TSource & source, TUnaryOperator o, Parallel)
+{
+    SEQAN_ASSERT_GEQ(length(target), length(source));
+    __gnu_parallel::transform(begin(source, Standard()), end(source, Standard()), begin(target, Standard()), o);
 }
 
 // ----------------------------------------------------------------------------
@@ -453,9 +490,31 @@ inline void stableSort(TContainer & c, Parallel)
 // ----------------------------------------------------------------------------
 
 template <typename TContainer, typename TFunctor>
+inline TFunctor forEach(TContainer & c, TFunctor f)
+{
+    return forEach(c, f, Serial());
+}
+
+template <typename TContainer, typename TFunctor>
 inline TFunctor forEach(TContainer const & c, TFunctor f)
 {
     return forEach(c, f, Serial());
+}
+
+// ----------------------------------------------------------------------------
+// Function transform()
+// ----------------------------------------------------------------------------
+
+template <typename TTarget, typename TSource, typename TUnaryOperator>
+inline void transform(TTarget & target, TSource & source, TUnaryOperator o)
+{
+    transform(target, source, o, Serial());
+}
+
+template <typename TContainer, typename TUnaryOperator>
+inline void transform(TContainer & c, TUnaryOperator o)
+{
+    transform(c, o, Serial());
 }
 
 // ----------------------------------------------------------------------------

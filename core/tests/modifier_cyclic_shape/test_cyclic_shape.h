@@ -29,58 +29,50 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Author: Manuel Holtgrewe <manuel.holtgrewe@fu-berlin.de>
-// ==========================================================================
-// Test the specialization Unordered SeedSet.
+// Author: Sascha Meiers <meiers@inf.fu-berlin.de>
 // ==========================================================================
 
-#ifndef TEST_SEEDS_TEST_SEEDS_SEED_SET_UNORDERED_H_
-#define TEST_SEEDS_TEST_SEEDS_SEED_SET_UNORDERED_H_
+#ifndef SEQAN_CORE_TESTS_MODIFIER_CYCLIC_SHAPE_TEST_CYCLIC_SHAPE_H_
+#define SEQAN_CORE_TESTS_MODIFIER_CYCLIC_SHAPE_TEST_CYCLIC_SHAPE_H_
 
-#include <seqan/basic.h>  // Includes testing infrastructure.
-#include <seqan/file.h>   // Required to print strings in tests.
+#include <seqan/basic.h>
+#include <seqan/file.h>
+#include <seqan/sequence.h>
+#include <seqan/modifier.h>
 
-#include <seqan/seeds.h>  // Include module under test.
+using namespace seqan;
 
-template <typename TSeedSpec>
-void testSeedsSeedSetConstructors(TSeedSpec const &)
 
-// Test container functions for specialization unordered.
-SEQAN_DEFINE_TEST(test_seeds_seed_set_container_functions_unordered)
+SEQAN_DEFINE_TEST(test_modifier_cyclic_shape_cyclic_shape)
 {
-    using namespace seqan;
+    CyclicShape<GenericShape> shape;
+    CharString tmp;
 
-    { // Construct with begin/end in both dimensions.
-        // Define Seed type and declare a variable.
-        typedef Seed<Simple> TSeed;
-        TSeed s(1, 2, 3, 5);
+    cyclicShapeToString(tmp, shape);
+    SEQAN_ASSERT_EQ(tmp, "1");
+    SEQAN_ASSERT_EQ(weight(shape), 1u);
+    SEQAN_ASSERT_EQ(shape.span, 1u);
 
-        // Check values from construction.
-        SEQAN_ASSERT_EQ(1u, beginPositionH(s));
-        SEQAN_ASSERT_EQ(2u, beginPositionV(s));
-        SEQAN_ASSERT_EQ(3u, endPositionH(s));
-        SEQAN_ASSERT_EQ(5u, endPositionV(s));
-        SEQAN_ASSERT_EQ(1, lowerDiagonal(s));
-        SEQAN_ASSERT_EQ(2, upperDiagonal(s));
-        SEQAN_ASSERT_EQ(1, startDiagonal(s));
-        SEQAN_ASSERT_EQ(2, endDiagonal(s));
-    }
-    { // Construct from ChainedSeed object.
-        typedef Seed<ChainedSeed> TSeed2;
-        TSeed2 s2(1, 2, 3);
-        typedef Seed<Simple> TSeed;
-        TSeed s(s2);
+    unsigned DIFF[] = {1, 1, 1, 4, 1, 5};
+    typedef CyclicShape<FixedShape<1, GappedShape<HardwiredShape<1, 1, 1, 4, 1> >, 3> > TShape;
 
-        // Check values from construction.
-        SEQAN_ASSERT_EQ(1u, beginPositionH(s));
-        SEQAN_ASSERT_EQ(4u, endPositionH(s));
-        SEQAN_ASSERT_EQ(2u, beginPositionV(s));
-        SEQAN_ASSERT_EQ(5u, endPositionV(s));
-        SEQAN_ASSERT_EQ(1, lowerDiagonal(s));
-        SEQAN_ASSERT_EQ(1, upperDiagonal(s));
-        SEQAN_ASSERT_EQ(1, beginDiagonal(s));
-        SEQAN_ASSERT_EQ(1, endDiagonal(s));
-    }
+    TShape s;
+    cyclicShapeToString(tmp, s);
+    SEQAN_ASSERT_EQ(tmp, "0111100011000");
+    SEQAN_ASSERT_EQ(weight(s), 6u);
+    SEQAN_ASSERT_EQ(static_cast<unsigned>(s.span), 13u);
+    for (unsigned i = 0; i < 6; ++i)
+        SEQAN_ASSERT_EQ(static_cast<unsigned>(s.diffs[i]), DIFF[i]);
+
+    stringToCyclicShape(shape, tmp);
+    SEQAN_ASSERT_EQ(tmp, "0111100011000");
+    SEQAN_ASSERT_EQ(weight(shape), 6u);
+    SEQAN_ASSERT_EQ(shape.span, 13u);
+    for (unsigned i = 0; i < 6; ++i)
+        SEQAN_ASSERT_EQ(static_cast<unsigned>(shape.diffs[i]), DIFF[i]);
+
+
 }
 
-#endif  // TEST_SEEDS_TEST_SEEDS_SEED_SET_UNORDERED_H_
+
+#endif  // SEQAN_CORE_TESTS_MODIFIER_CYCLIC_SHAPE_TEST_MODIFIER_CYCLIC_SHAPE_H_

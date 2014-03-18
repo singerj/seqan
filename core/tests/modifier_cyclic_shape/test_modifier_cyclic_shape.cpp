@@ -29,60 +29,32 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Author: Manuel Holtgrewe <manuel.holtgrewe@fu-berlin.de>
-// ==========================================================================
-// Test the interface of the Seed class for specializations Simple Seed and
-// Chained Seed.
+// Author: Sascha Meiers <meiers@inf.fu-berlin.de>
 // ==========================================================================
 
-#ifndef TEST_SEEDS_TEST_BASIC_ITER_INDIRECT_H_
-#define TEST_SEEDS_TEST_BASIC_ITER_INDIRECT_H_
+#include <seqan/basic.h>
+#include "test_modifier_cyclic_shape.h"
+#include "test_cyclic_shape.h"
 
-#include <seqan/basic.h>  // Includes testing infrastructure.
-#include <seqan/file.h>   // Required to print strings in tests.
-
-#include <seqan/seeds.h>  // Include module under test.
-
-#include <set>
-
-// Test constructors of the indirect iterator.
-SEQAN_DEFINE_TEST(test_seeds_basic_iter_indirect_constructors)
+SEQAN_BEGIN_TESTSUITE(test_modifier_cyclic_shape)
 {
-    using namespace seqan;
+    // Test Cyclic Shape class
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_cyclic_shape);
 
-    SEQAN_ASSERT_FAIL("Write me!");
+    // Tests for Iteration.
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_iterator_generic_alloc_charstring);
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_iterator_generic_mod_charstring);
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_iterator_generic_infix_charstring);
 
-    // Default constructor.
-    {
-    }
-    // Construct from wrapped iterator.
-    {
-    }
-    // Copy constructor.
-    {
-    }
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_iterator_fixed_alloc_charstring);
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_iterator_fixed_mod_charstring);
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_iterator_fixed_infix_charstring);
+
+
+    // Tests for other functionanlity of modifiers
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_modified_string_construct);
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_modified_string_functions);
+    SEQAN_CALL_TEST(test_modifier_cyclic_shape_modified_iterator);
+
 }
-
-// Test the metafunctions.
-SEQAN_DEFINE_TEST(test_seeds_basic_iter_indirect_metafunctions)
-{
-    using namespace seqan;
-
-    SEQAN_ASSERT_FAIL("Write me!");
-
-    // Iterator
-    {
-    }
-
-    // Const Iterator
-    {
-    }
-}
-
-// Test the common iterator functions.
-SEQAN_DEFINE_TEST(test_seeds_basic_iter_indirect_basic_functions)
-{
-    SEQAN_ASSERT_FAIL("Write me!");
-}
-
-#endif  // #ifndef TEST_SEEDS_TEST_BASIC_ITER_INDIRECT_H_
+SEQAN_END_TESTSUITE
