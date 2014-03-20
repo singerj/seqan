@@ -389,6 +389,56 @@ inline void readOne(TTarget & target, TFwdIterator &iter)
 }
 
 // ----------------------------------------------------------------------------
+// Function readOne()
+// ----------------------------------------------------------------------------
+
+//TODO(singer): implement a chunked version!
+//TODO(singer): write test
+template <typename TTarget, typename TFwdIterator, typename TIgnoreFunctor>
+inline void readOne(TTarget & target, TFwdIterator &iter, TIgnoreFunctor const &ignoreFunctor)
+{
+    //readUntil(target, iter, CountDownFunctor<>(1), ignoreFunctor);
+    if (atEnd(iter))
+        throw UnexpectedEnd();
+
+    Asserter<TIgnoreFunctor, ParseError> asserter(ignoreFunctor);
+
+    asserter(*iter);
+    target = *iter;
+    ++iter;
+}
+
+template <typename TTarget, typename TFwdIterator>
+inline void readOne(TTarget & target, TFwdIterator &iter)
+{
+    //readUntil(target, iter, CountDownFunctor<>(1));
+
+    if (atEnd(iter))
+        throw UnexpectedEnd();
+
+    target = *iter;
+    ++iter;
+}
+
+template <typename TTarget, typename TFwdIterator, typename TNumber>
+inline void readRawByte(TTarget & target, TFwdIterator &iter, TNumber numberOfBytes)
+{
+    /*typename Value<TFwdIterator>::Type val;
+    for (; !atEnd(iter); ++iter)
+    {
+        if (stopFunctor(val = *iter))
+            return;
+        if (!ignoreFunctor(val))
+            writeValue(target, val);
+    }
+    */
+    char * buffer = reinterpret_cast<char *>(&target);
+    for (; !numberOfBytes(*iter); ++buffer, ++iter)
+        *buffer = *iter;
+    //readUntil(buffer, iter, CountDownFunctor<>(numberOfBytes));
+}
+
+// ----------------------------------------------------------------------------
 // Function readLine()
 // ----------------------------------------------------------------------------
 

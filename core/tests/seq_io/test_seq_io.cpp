@@ -35,10 +35,7 @@
 #include <seqan/basic.h>
 #include <seqan/file.h>
 
-//#include <../../extras/include/seqan/sequence_extras.h>
-
-#include <seqan/stream.h>
-#include <seqan/seq_io/fasta_fastq.h>
+#include <seqan/seq_io.h>
 
 //#include "test_seq_io_generic.h"
 //
@@ -172,6 +169,7 @@ SEQAN_BEGIN_TESTSUITE(test_seq_io)
 
     // Tests for FASTA
     SEQAN_CALL_TEST(test_stream_write_record_fasta_default);
+    SEQAN_CALL_TEST(test_stream_write_record_fasta_no_empty_lines);
     SEQAN_CALL_TEST(test_stream_write_record_fasta_nolinebreaks);
     SEQAN_CALL_TEST(test_stream_write_record_fastq_default_separate_qual);
     SEQAN_CALL_TEST(test_stream_write_record_fastq_default_qual_in_seq);

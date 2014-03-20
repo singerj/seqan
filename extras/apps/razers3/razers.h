@@ -36,6 +36,7 @@
 #include <seqan/pipe.h>
 #include <seqan/parallel.h>
 #include <seqan/seq_io.h>
+#include <seqan/stream.h>
 
 #ifdef RAZERS_PROFILE
 #include "profile_timeline.h"
@@ -537,7 +538,7 @@ struct MatchVerifier
     {
         genomeLength = 0;
         rightClip = 0;
-        sinkPos = MaxValue<TContigPos>::VALUE;
+        sinkPos = MaxValue<TContigPos>::VALUE >> 1;
         onReverseComplement = false;
         oneMatchPerBucket = false;
         compactionTime = 0;

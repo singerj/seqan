@@ -327,7 +327,11 @@ mark_as_advanced(_SEQAN_FIND_OPENMP)
 set (SEQAN_HAS_OPENMP FALSE)
 if (NOT _SEQAN_FIND_OPENMP EQUAL -1)
   find_package(OpenMP QUIET)
-  if (OPENMP_FOUND)
+  # Note that in the following, we do not check for OPENMP_FOUND since this is
+  # only true if both C and C++ compiler support OpenMP.  This is not the case
+  # if the user has a compiler without OpenMP support by default and overrides
+  # only the C++ compiler (e.g. on winter 2013's Mac Os X).
+  if (OpenMP_CXX_FLAGS)
     set (SEQAN_HAS_OPENMP   TRUE)
     set (SEQAN_LIBRARIES    ${SEQAN_LIBRARIES}    ${OpenMP_LIBRARIES})
     set (SEQAN_INCLUDE_DIRS ${SEQAN_INCLUDE_DIRS} ${OpenMP_INCLUDE_DIRS})
@@ -346,17 +350,6 @@ if (SEQAN_ENABLE_CUDA AND NOT _SEQAN_FIND_CUDA EQUAL -1)
   find_package(CUDA QUIET)
   if (CUDA_FOUND)
     set (SEQAN_HAS_CUDA TRUE)
-    # Build CUDA targets from architecture 2.0 upwards.
-    set (SEQAN_NVCC_FLAGS "-arch sm_20")
-    # Add flags for the CUDA compiler.
-    list (APPEND CUDA_NVCC_FLAGS_RELEASE "-O3")
-    list (APPEND CUDA_NVCC_FLAGS_MINSIZEREL "-O3")
-    list (APPEND CUDA_NVCC_FLAGS_RELWITHDEBINFO "-O3 -g -lineinfo")
-    list (APPEND CUDA_NVCC_FLAGS_DEBUG "-O0 -g -lineinfo")
-    # Enable debug symbols in device code.
-#    list (APPEND CUDA_NVCC_FLAGS_DEBUG "-O0 -g -G -lineinfo")
-    # Turn CUDA cross-execution-space call warnings into errors.
-#    list (APPEND SEQAN_NVCC_FLAGS --Werror=cross-execution-space-call)
   endif ()
 endif (SEQAN_ENABLE_CUDA AND NOT _SEQAN_FIND_CUDA EQUAL -1)
 

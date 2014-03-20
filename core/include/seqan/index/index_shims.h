@@ -129,27 +129,20 @@ The size of $suffixArray$ must be at least $length(text)$ before calling this fu
 */
 /*!
  * @fn createSuffixArray
- * 
- * @headerfile seqan/index.h
- * 
+ * @headerfile <seqan/index.h>
  * @brief Creates a suffix array from a given text.
  * 
- * @signature void createSuffixArray(suffixArray, text[, algo_tag])
+ * @signature void createSuffixArray(suffixArray, text[, algoTag]);
  * 
- * @param text A given text. Types: @link SequenceConcept @endlink
- * @param algo_tag A tag that identifies the algorithm which is used for
- *                 creation.
- * @param suffixArray The resulting suffix array.
+ * @param[out] suffix  Array The resulting suffix array.
+ * @param[in]  text    A given text. Types: @link SequenceConcept @endlink
+ * @param[in]  algoTag A tag that identifies the algorithm which is used for creation.
  *
- * @return void
- * 
- * @section Remarks
- * 
- * This function should not be called directly. Please use @link Index#indexCreate
- * @endlink or @link Index#indexRequire @endlink. The size of <tt>suffixArray</tt>
+ * This function should not be called directly.  Please use @link Index#indexCreate
+ * @endlink or @link Index#indexRequire @endlink.  The size of <tt>suffixArray</tt>
  * must be at least <tt>length(text)</tt> before calling this function.
  * 
- * @link DemoSuffixArray @endlink
+ * @see DemoSuffixArray
  */
     template < typename TSA,
                typename TText,
@@ -315,25 +308,18 @@ The size of $lcp$ must be at least $length(text)$ before calling this function.
 */
 /*!
  * @fn createLcpTable
+ * @headerfile <seqan/index.h>
+ * @brief Creates a LCP table from a given text and suffix array.
  * 
- * @headerfile seqan/index.h
+ * @signature void createLcpTable(lcp, text, suffixArray[, algoTag]);
  * 
- * @brief Creates a lcp table from a given text and suffix array.
+ * @param[out] lcp         The resulting lcp table.
+ * @param[in]  text        A given text. Types: @link SequenceConcept @endlink
+ * @param[in]  suffixArray The suffix array of <tt>text</tt>.
+ * @param[in]  algoTag     A tag that identifies the algorithm which is used for creation.
  * 
- * @signature void createLcpTable(lcp, text, suffixArray[, algo_tag])
- * 
- * @param text A given text. Types: @link SequenceConcept @endlink
- * @param algo_tag A tag that identifies the algorithm which is used for
- *                 creation.
- * @param suffixArray The suffix array of <tt>text</tt>.
- * @param lcp The resulting lcp table.
- * 
- * @return void
- *
- * @section Remarks
- * 
- * This function should not be called directly. Please use @link Index#indexCreate
- * @endlink or @link Index#indexRequire @endlink. The size of <tt>lcp</tt> must be at
+ * This function should not be called directly.  Please use @link Index#indexCreate
+ * @endlink or @link Index#indexRequire @endlink.  The size of <tt>lcp</tt> must be at
  * least <tt>length(text)</tt> before calling this function.
  */
 
@@ -536,25 +522,18 @@ The size of $bwt$ must be at least $length(text)$ before calling this function.
 */
 /*!
  * @fn createBWTable
- * 
- * @headerfile seqan/index.h
- * 
+ * @headerfile <seqan/index.h>
  * @brief Creates a Burrows-Wheeler table from a given text and suffix array.
  * 
- * @signature void createBWTable(bwt, text, suffixArray[, algo_tag])
+ * @signature void createBWTable(bwt, text, suffixArray[, algoTag]);
  * 
- * @param bwt The resulting Burrows-Wheeler table.
- * @param algo_tag A tag that identifies the algorithm which is used for
- *                 creation.
- * @param suffixArray The suffix array of <tt>text</tt>.
- * @param text A given text. Types: @link SequenceConcept @endlink
+ * @param[out] bwt     The resulting Burrows-Wheeler table.
+ * @param[in]  suffix  Array The suffix array of <tt>text</tt>.
+ * @param[in]  text    A given text. Types: @link SequenceConcept @endlink
+ * @param[in]  algoTag A tag that identifies the algorithm which is used for creation.
  *
- * @return void
- * 
- * @section Remarks
- * 
- * This function should not be called directly. Please use @link Index#indexCreate
- * @endlink or @link Index#indexRequire @endlink. The size of <tt>bwt</tt> must be at
+ * This function should not be called directly.  Please use @link Index#indexCreate
+ * @endlink or @link Index#indexRequire @endlink.  The size of <tt>bwt</tt> must be at
  * least <tt>length(text)</tt> before calling this function.
  */
 	// default
@@ -612,24 +591,18 @@ The size of $bwt$ must be at least $length(text)$ before calling this function.
 */
 /*!
  * @fn orderOccurrences
- * 
- * @headerfile seqan/index.h
- * 
+ * @headerfile <seqan/index.h>
  * @brief Sorts a string of occurrences.
  * 
- * @signature void orderOccurrences(occString)
+ * @signature void orderOccurrences(occString);
  * 
- * @param occString String of occurrences.
- * 
- * @return void
+ * @param[in,out] occString String of occurrences.
  *
- * @section Remarks
- * 
  * The occurrences are sorted by increasing positions.
  * 
- * @link DemoMummy @endlink
- * @link DemoSupermaximalRepeats @endlink
- * @link DemoMaximalUniqueMatches @endlink
+ * @see DemoMummy
+ * @see DemoSupermaximalRepeats
+ * @see DemoMaximalUniqueMatches
  * 
  * @see VSTreeIterator#getOccurrences
  * @see IndexQGram#getOccurrences
@@ -667,24 +640,20 @@ The size of $bwt$ must be at least $length(text)$ before calling this function.
 */
 /*!
  * @fn Index#indexCreate
- * 
  * @headerfile seqan/index.h
- * 
  * @brief Creates a specific @link Fibre @endlink.
  * 
- * @signature bool indexCreate(index, fibreTag[, algoTag])
+ * @signature bool indexCreate(index, fibreTag[, algoTag]);
  * 
- * @param fibreTag A tag that identifies the @link Fibre @endlink
- * @param algoTag A tag that identifies the algorithm which is used to create
- *                 the fibre. Default: The result of @link Index#DefaultIndexCreator
- *                 @endlink.
- * @param index The @link Index @endlink object holding the fibre.
+ * @param[in]     fibreTag A tag that identifies the @link Fibre @endlink
+ * @param[in]     algoTag  A tag that identifies the algorithm which is used to create the fibre.  Default: The
+ *                         result of @link Index#DefaultIndexCreator @endlink.
+ * @param[in,out] index    The @link Index @endlink object holding the fibre.
+ *
  * @return bool <tt>true</tt> on a success and false <tt>otherwise</tt>
  * 
- * @section Remarks
- * 
- * <tt>indexCreate</tt> calls the fibre corresponding <tt>createXXX(..)</tt>
- * function (e.g. @link createSuffixArray @endlink).
+ * <tt>indexCreate</tt> calls the fibre corresponding <tt>createXXX(..)</tt> function (e.g. @link createSuffixArray
+ * @endlink).
  */
 	template <typename TText, typename TSpec, typename TSpecAlg>
 	inline bool indexCreate(Index<TText, TSpec> &index, FibreSA, TSpecAlg const alg) {
@@ -728,11 +697,14 @@ The size of $bwt$ must be at least $length(text)$ before calling this function.
 		return true;
 	}
 
-	template <typename TText, typename TSpec, typename TFibre>
-	inline bool indexCreate(Index<TText, TSpec> &index, Tag<TFibre> const fibre) {
-	SEQAN_CHECKPOINT
-		return indexCreate(index, fibre, typename DefaultIndexCreator<Index<TText, TSpec>, Tag<TFibre> const>::Type());
-	}
+    template <typename TText, typename TSpec, typename TFibre>
+    inline bool indexCreate(Index<TText, TSpec> &index, Tag<TFibre> const fibre) {
+    SEQAN_CHECKPOINT
+        if (!empty(indexText(index)))
+            return indexCreate(index, fibre, typename DefaultIndexCreator<Index<TText, TSpec>, Tag<TFibre> const>::Type());
+        else
+            return false;
+    }
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -753,16 +725,13 @@ The size of $bwt$ must be at least $length(text)$ before calling this function.
 */
 /*!
  * @fn Index#indexSupplied
- * 
  * @headerfile seqan/index.h
- * 
  * @brief Returns whether a specific @link Fibre @endlink is present.
  * 
- * @signature bool indexSupplied(index, fibreTag)
+ * @signature bool indexSupplied(index, fibreTag);
  * 
- * @param index The @link Index @endlink object holding the fibre.
- * @param fibreTag A tag that identifies the @link Fibre @endlink. 
- *                 Index Fibres
+ * @param[in] index    The @link Index @endlink object holding the fibre.
+ * @param[in] fibreTag A tag that identifies the @link Fibre @endlink Index Fibres.
  * 
  * @return bool <tt>true</tt>, iff the fibre is present.
  */
@@ -809,27 +778,27 @@ I	ISSISSIPPI
 */
 /*!
  * @fn Index#indexRequire
- * 
  * @headerfile seqan/index.h
- * 
  * @brief On-demand creation of a specific @link Fibre @endlink.
  * 
- * @signature bool indexRequire(index, fibre_tag)
+ * @signature bool indexRequire(index, fibreTag);
  * 
- * @param index The @link Index @endlink object holding the fibre.
- * @param fibre_tag A tag that identifies the @link Fibre @endlink
+ * @param[in,out] index    The @link Index @endlink object holding the fibre.
+ * @param[in]     fibreTag A tag that identifies the @link Fibre @endlink
  * 
  * @return bool <tt>true</tt> on a successful creation.
- * 
- * @section Remarks
  * 
  * If the fibre already exists (@link Index#indexSupplied @endlink is true) then <tt>indexRequire</tt> does nothing. If
  * the fibre doesn't exist then @link Index#indexCreate @endlink is called to create it.
  *
- * @section Example
+ * @section Examples
  *
  * The following code shows how the BWT of an text can be computed.
+ *
  * @include demos/index/index_textAt_indexText_saAt_indexRequire.cpp
+ *
+ * The output is as follows:
+ *
  * @include demos/index/index_textAt_indexText_saAt_indexRequire.cpp.stdout
  */
 
@@ -942,6 +911,23 @@ I	ISSISSIPPI
 	SEQAN_CHECKPOINT
 		return open(string, fileName, OPEN_RDONLY);
 	}
+
+#ifdef PLATFORM_CUDA
+    template <typename TChar, typename TAlloc>
+    inline bool open(thrust::device_vector<TChar, TAlloc> & me, const char *fileName, int openMode)
+    {
+        String<TChar> str;
+        if (!open(str, fileName, openMode)) return false;
+        assign(me, str);
+        return true;
+    }
+
+    template <typename TChar, typename TAlloc>
+    inline bool open(thrust::device_vector<TChar, TAlloc> & me, const char *fileName)
+    {
+        return open(me, fileName, OPEN_RDONLY);
+    }
+#endif
 
 	// ATTENTION:
 	// This implementation of open doesn't work with external memory StringSets (External<>, MMap<>)

@@ -45,6 +45,7 @@ namespace seqan {
 // Class ParseError
 // ----------------------------------------------------------------------------
 
+//TODO(singer): now in stream/tokinization.h
 /*
 .Internal.Class.ParseError
 ..cat:Miscellaneous
@@ -57,8 +58,7 @@ public:
     ParseError(std::string const & option) :
         RuntimeError(option)
     {}
-};
-*/
+};*/
 
 // ----------------------------------------------------------------------------
 // Class InvalidOption
