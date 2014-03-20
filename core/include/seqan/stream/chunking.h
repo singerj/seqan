@@ -193,10 +193,11 @@ getChunk(Iter<TContainer, AdaptorIterator<TValue*, TSpec> > const &rootedIter, O
     return toRange(hostIterator(rootedIter), begin(cont, Standard()) + capacity(cont));
 }
 
+// TODO(singer): no const here -> remove at the other positions to?
 // SeqAn's strings
 template <typename TValue, typename TSpec>
 inline typename Chunk<String<TValue, TSpec> >::Type
-getChunk(String<TValue, TSpec> const &cont, Output)
+getChunk(String<TValue, TSpec> &cont, Output)
 {
     return toRange(end(cont, Standard()), begin(cont, Standard()) + capacity(cont));
 }
