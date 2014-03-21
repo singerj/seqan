@@ -190,6 +190,8 @@ static StringSet<String<double> > dist;
 
 void initFreq()
 {
+    // Frequencies according to: http://web.expasy.org/docs/relnotes/relstat.html (20.03.2014)
+
     appendValue(freq, 0);
     appendValue(freq, 8.25);
     appendValue(freq, 13.78);
