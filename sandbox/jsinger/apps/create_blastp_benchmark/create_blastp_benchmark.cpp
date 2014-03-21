@@ -83,6 +83,15 @@ struct AppOptions
     // the error rate
     double errorRate;
 
+    // name of the file to store the alignment qualities
+    String<char> alignmentQuality;
+    
+    // name of the file to store the start position
+    String<char> startPosition;
+
+    // name of the file to store the frequency control    
+    String<char> frequencyControl;
+
     AppOptions() :
         dbFileName("db.fasta"),
         numSeqDB(100000),
@@ -92,7 +101,10 @@ struct AppOptions
         numSeqReads(100000),
         minLengthSeqReads(50),
         maxLengthSeqReads(50),
-        errorRate(5.0)
+        errorRate(5.0),
+        alignmentQuality("alignmentQualities.txt"),
+        startPosition("startPosition.txt"),
+        frequencyControl("frequencyControl.txt")
     {}
 };
 
@@ -116,7 +128,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 
     // Define usage line and long description.
     addUsageLine(parser, "[\\fIOPTIONS\\fP] \"\\fITEXT\\fP\"");
-    addDescription(parser, "This is the application skelleton and you should modify this string.");
+    addDescription(parser, "This app creates a database and reads for a blastp benchmark.");
 
     addArgument(parser, seqan::ArgParseArgument(seqan::ArgParseArgument::STRING, "TEXT"));
     addArgument(parser, seqan::ArgParseArgument(seqan::ArgParseArgument::STRING, "TEXT"));
@@ -130,11 +142,16 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     addOption(parser, seqan::ArgParseOption("maR", "maxLengthSeqReads", "Set the maximum length of reads.", ArgParseArgument::INTEGER, "INT"));
     
     addOption(parser, seqan::ArgParseOption("er", "errorRate", "Set the error rate of the reads.", ArgParseArgument::DOUBLE, "ERROR"));
+    
+    addOption(parser, seqan::ArgParseOption("aq", "alignmentQuality", "Name of the file the alignment qualities should be stored in.", ArgParseArgument::STRING, "TEXT"));
+    addOption(parser, seqan::ArgParseOption("st", "startPosition", "Name of the file the alignment start positions should be stored in.", ArgParseArgument::STRING, "TEXT"));
+    addOption(parser, seqan::ArgParseOption("fc", "frequencyControl", "Name of the file the frequency control should be stored in.", ArgParseArgument::STRING, "TEXT"));
 
     // Add Examples Section.
     addTextSection(parser, "Examples");
-    addListItem(parser, "\\fBcreate_blastp_benchmark\\fP \\fB-v\\fP \\fItext\\fP",
+    addListItem(parser, "\\fBcreate_blastp_benchmark\\fP \\fB-nd 10000\\fP \\fB-miD 100\\fP \\fB-maD 3000\\fP \\fBreads.fasta\\fP \\fB-nR 1000\\fP \\fB-miR 30\\fP \\fB-maR 100\\fP",
                 "Call with \\fITEXT\\fP set to \"text\" with verbose output.");
+
 
     // Parse command line.
     seqan::ArgumentParser::ParseResult res = seqan::parse(parser, argc, argv);
@@ -155,6 +172,10 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 
     getOptionValue(options.errorRate, parser, "errorRate");
 
+    getOptionValue(options.alignmentQuality, parser, "alignmentQuality");
+    getOptionValue(options.startPosition, parser, "startPosition");
+    getOptionValue(options.frequencyControl, parser, "frequencyControl");
+
     return seqan::ArgumentParser::PARSE_OK;
 }
 
@@ -170,26 +191,26 @@ static StringSet<String<double> > dist;
 void initFreq()
 {
     appendValue(freq, 0);
-    appendValue(freq, 7.4);
-    appendValue(freq, 11.6);
-    appendValue(freq, 16);
-    appendValue(freq, 21.9);
-    appendValue(freq, 25.2);
-    appendValue(freq, 31);
-    appendValue(freq, 34.7);
-    appendValue(freq, 42.1);
-    appendValue(freq, 45);
-    appendValue(freq, 48.8);
-    appendValue(freq, 56.4);
-    appendValue(freq, 63.6);
-    appendValue(freq, 65.4);
-    appendValue(freq, 69.4);
-    appendValue(freq, 74.4);
-    appendValue(freq, 82.5);
-    appendValue(freq, 88.7);
-    appendValue(freq, 90);
-    appendValue(freq, 93.3);
-    appendValue(freq, 100.1);
+    appendValue(freq, 8.25);
+    appendValue(freq, 13.78);
+    appendValue(freq, 17.84);
+    appendValue(freq, 23.29);
+    appendValue(freq, 24.66);
+    appendValue(freq, 28.59);
+    appendValue(freq, 35.34);
+    appendValue(freq, 42.41);
+    appendValue(freq, 44.68);
+    appendValue(freq, 50.63);
+    appendValue(freq, 60.29);
+    appendValue(freq, 66.13);
+    appendValue(freq, 68.54);
+    appendValue(freq, 72.4);
+    appendValue(freq, 77.11);
+    appendValue(freq, 83.68);
+    appendValue(freq, 89.02);
+    appendValue(freq, 90.1);
+    appendValue(freq, 93.02);
+    appendValue(freq, 99.88);
 }
 
 template <typename TValue>
@@ -274,9 +295,10 @@ void createDatabase(AppOptions const & options){
     }
 
     std::ofstream outStream;
-    outStream.open("test.txt",std::ios::out);
+    outStream.open(toCString(options.frequencyControl), std::ios::out);
+    outStream << "#This file shows for every amino acid its frequency in the db and the expected one." << std::endl;
     for (unsigned i = 0; i < length(dbFreq); ++i)
-        outStream << i << "\t" << static_cast<double>(dbFreq[i]) / static_cast<double>(lengthSum(db)) << "\n";
+        outStream << AminoAcid(i) << "\t" << static_cast<double>(dbFreq[i]) / static_cast<double>(lengthSum(db)) << "\t" << freq[i+1] - freq[i] << "\n";
 }
 
 void createReads(AppOptions const & options){
@@ -295,10 +317,13 @@ void createReads(AppOptions const & options){
     Pdf<Uniform<int> > uniformSeqIdRng(0, length(seqs) - 1);
 
     std::ofstream outStream;
-    outStream.open("startPos.txt",std::ios::out);
+    outStream.open(toCString(options.startPosition), std::ios::out);
+    outStream << "#Stores the start positions of the reads in the db (id of read/pos within read)." << std::endl;
 
     std::ofstream outStreamQual;
-    outStreamQual.open("quals.txt",std::ios::out);
+    outStreamQual.open(toCString(options.alignmentQuality), std::ios::out);
+    outStreamQual << "#The alignment score of the mutaten reads and the alignment score of the original read (with itself) are stored here. At the end of the file the averages are stored." << std::endl;
+    outStreamQual << "#entryLength\tnumErrors\talignScore\talignOrigScore" << std::endl;
 
     long globalAlignScore = 0;
     long globalOrigAlignScore = 0;
@@ -309,8 +334,6 @@ void createReads(AppOptions const & options){
 
         Pdf<Uniform<int> > uniformInt(options.minLengthSeqReads, options.maxLengthSeqReads);
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
-
-        std::cerr << entryLength << " " << options.minLengthSeqReads << " " <<  options.maxLengthSeqReads << std::endl;
 
         unsigned int uniformSeqId = pickRandomNumber(rng, uniformSeqIdRng);
 
