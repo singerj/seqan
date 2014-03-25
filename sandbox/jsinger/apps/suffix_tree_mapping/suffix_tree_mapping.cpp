@@ -234,6 +234,8 @@ int main(int argc, char const ** argv)
 
     
     // DB
+    double startTime = sysTime();
+    std::cout << "Reading (translateing) database took ";
     seqan::SequenceStream seqInDB(seqan::toCString(options.dbFileName));
     seqan::StringSet<seqan::CharString> dbIds;
     seqan::StringSet<seqan::String<char>, Owner<seqan::ConcatDirect<> > > dbRaw;
@@ -248,6 +250,7 @@ int main(int argc, char const ** argv)
         std::cout << "ERROR: Could not read db!\n";
         return 1;
     }
+    std::cout << sysTime() - startTime << " seconds" << std::endl;
 
 
     seqan::StringSet<seqan::String<Dna5>, Owner<seqan::ConcatDirect<> > > dbDna;
@@ -259,6 +262,8 @@ int main(int argc, char const ** argv)
 
     TIndex _index;
 
+    startTime = sysTime();
+    std::cout << "Reading/computing the index took ";
     if (!open(_index, toCString(options.outputIndexName)))
     {
         if (options.inputType == "dna")
@@ -279,6 +284,7 @@ int main(int argc, char const ** argv)
         if (options.onlyStoreIndex)
             return 0;
     }
+    std::cout << sysTime() - startTime << " seconds" << std::endl;
 
     String<unsigned> origLength;
     resize(origLength, length(dbRaw), 0);
@@ -289,6 +295,7 @@ int main(int argc, char const ** argv)
     seqan::SequenceStream seqInSample(seqan::toCString(options.sampleFileName));
     std::fstream fout(toCString(options.outputFileName), std::ios::binary | std::ios::out | std::ios::app);
 
+    std::cout << "Reading and searching for the queries took ";
     SEQAN_OMP_PRAGMA(parallel num_threads(options.numThreads))
     for (; ;)
     {
@@ -385,6 +392,7 @@ int main(int argc, char const ** argv)
             writeRecord(fout, records[j], Gff());
         }
     }
+    std::cout << sysTime() - startTime << " seconds" << std::endl;
     return 0;
 }
 
