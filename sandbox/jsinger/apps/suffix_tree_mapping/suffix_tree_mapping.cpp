@@ -41,6 +41,15 @@
 
 #include <seqan/arg_parse.h>
 
+namespace seqan
+{
+template <>
+struct SAValue<StringSet<String<AminoAcid>, Owner<ConcatDirect<> > > >
+{
+    typedef Pair<unsigned short, unsigned> Type;
+};
+}
+
 using namespace seqan;
 
 // ==========================================================================
@@ -145,8 +154,6 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     getOptionValue(options.bufferSize, parser, "bf");
     options.onlyStoreIndex = isSet(parser, "storeOnly");
 
-    std::cerr << options.outputIndexName << std::endl;
-
     return seqan::ArgumentParser::PARSE_OK;
 }
 
@@ -202,6 +209,8 @@ bool genomicLocationSet(TNewPos & newPos, TOldPos const & pos, unsigned queryLen
     return true;
 }
 
+
+
 // --------------------------------------------------------------------------
 // Function main()
 // --------------------------------------------------------------------------
@@ -232,7 +241,6 @@ int main(int argc, char const ** argv)
                   << "VERBOSITY\t" << options.verbosity << '\n';
     }*/
 
-    
     // DB
     double startTime = sysTime();
     std::cout << "Reading (translateing) database took ";
@@ -261,6 +269,7 @@ int main(int argc, char const ** argv)
     typedef Finder<TIndex> TFinder;
 
     TIndex _index;
+    TFinder finder(_index);
 
     startTime = sysTime();
     std::cout << "Reading/computing the index took ";
@@ -279,6 +288,7 @@ int main(int argc, char const ** argv)
                 appendValue(aaSeqs, dbRaw[i]);
             _index = TIndex(aaSeqs);
         }
+        find(finder, "A"); // dummy to force the index creation.
         save(_index, toCString(options.outputIndexName));
 
         if (options.onlyStoreIndex)
@@ -295,6 +305,7 @@ int main(int argc, char const ** argv)
     seqan::SequenceStream seqInSample(seqan::toCString(options.sampleFileName));
     std::fstream fout(toCString(options.outputFileName), std::ios::binary | std::ios::out | std::ios::app);
 
+    startTime = sysTime();
     std::cout << "Reading and searching for the queries took ";
     SEQAN_OMP_PRAGMA(parallel num_threads(options.numThreads))
     for (; ;)
@@ -321,7 +332,6 @@ int main(int argc, char const ** argv)
 
 
         String<GffRecord> records;
-        TFinder finder(_index);
         GffRecord record;
         record.type="peptide";
         appendValue(record.tagName, "ID");
