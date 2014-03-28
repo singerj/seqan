@@ -34,6 +34,8 @@
 
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
+#include <seqan/seq_io.h>
+#include <seqan/translation.h>
 
 #include <seqan/arg_parse.h>
 
@@ -64,6 +66,10 @@ struct AppOptions
     // The first (and only) argument of the program is stored here.
     seqan::CharString text;
 
+    String<char> codonTable;
+    String<char> genomeFile;
+    String<char> probFile;
+
     AppOptions() :
         verbosity(1)
     {}
@@ -92,11 +98,15 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     addDescription(parser, "This is the application skelleton and you should modify this string.");
 
     // We require one argument.
-    addArgument(parser, seqan::ArgParseArgument(seqan::ArgParseArgument::STRING, "TEXT"));
+   // addArgument(parser, seqan::ArgParseArgument(seqan::ArgParseArgument::STRING, "TEXT"));
 
     addOption(parser, seqan::ArgParseOption("q", "quiet", "Set verbosity to a minimum."));
     addOption(parser, seqan::ArgParseOption("v", "verbose", "Enable verbose output."));
     addOption(parser, seqan::ArgParseOption("vv", "very-verbose", "Enable very verbose output."));
+
+    addOption(parser, seqan::ArgParseOption("ct", "codonTable", "Name of the file the codon table is stored in.", ArgParseArgument::STRING, "TEXT"));
+    addOption(parser, seqan::ArgParseOption("i", "genomeTable", "Name of the genome file.", ArgParseArgument::STRING, "TEXT"));
+    addOption(parser, seqan::ArgParseOption("pf", "probFile", "Name of the probability file.", ArgParseArgument::STRING, "TEXT"));
 
     // Add Examples Section.
     addTextSection(parser, "Examples");
@@ -117,7 +127,11 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
         options.verbosity = 2;
     if (isSet(parser, "very-verbose"))
         options.verbosity = 3;
-    seqan::getArgumentValue(options.text, parser, 0);
+   // seqan::getArgumentValue(options.text, parser, 0);
+
+    getOptionValue(options.codonTable, parser, "ct");
+    getOptionValue(options.genomeFile, parser, "i");
+    getOptionValue(options.probFile, parser, "pf");
 
     return seqan::ArgumentParser::PARSE_OK;
 }
@@ -125,20 +139,117 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 struct AminoAcidToDna_
 {
     String<StringSet<String<char> > > table;
-    AminoAcidToDna_();
+    AminoAcidToDna_(AppOptions const & options);
 };
 
-AminoAcidToDna_::AminoAcidToDna_()
+AminoAcidToDna_::AminoAcidToDna_(AppOptions const & options)
 {
-    resize(table, 2);
-    resize(table[0], 4);
-    table[0][0] = "gct";
-    table[0][1] = "gcc"; 
-    table[0][2] = "gcg";
-    table[0][3] = "gct";
-    resize(table[1], 2);
-    table[1][0] = "aga";
-    table[1][1] = "agg";
+    String<char, MMap<> > codonString;
+    open(codonString, toCString(options.codonTable));
+    Iterator<String<char, MMap<> >, Rooted>::Type iter = begin(codonString);
+
+    String<char> codon;
+    AminoAcid aminoAcid;
+    resize(table, 24);
+    while (!atEnd(iter))
+    {
+        if (value(iter) == '#')
+        {
+            for (; value(iter) != '\n'; ++iter) ;
+            ++iter;
+        }
+        else
+        {
+            clear(codon);
+            for (; value(iter) != '\t'; ++iter) 
+            {
+                appendValue(codon, value(iter));
+            }
+            ++iter;
+
+            aminoAcid = value(iter);
+            ++iter;
+            ++iter;
+
+            appendValue(table[ordValue(aminoAcid)], codon);
+        }
+    }
+
+    for (unsigned i = 0; i < length(table); ++i)
+    {
+        std::cout << AminoAcid(i) << '\t';
+        for (unsigned j = 0; j < length(table[i]); ++j)
+            std::cout << toCString(table[i][j]) << '\t';
+        std::cout << std::endl;
+    }
+}
+
+template <typename TValue>
+unsigned hashCodon(String<TValue> const & codon)
+{
+    return ordValue(Dna(codon[2])) + 4 * ordValue(Dna(codon[1])) + 16 * ordValue(Dna(codon[0]));
+}
+
+bool initTransitionProb(double (&transitionProb)[64][64], AppOptions const & options)
+{
+    String<char, MMap<> > inString;
+    if (!open(inString, toCString(options.probFile)))
+        return false;
+    Iterator<String<char, MMap<> >, Rooted>::Type iter = begin(inString);
+
+    String<char> temp;
+    String<Dna> tempDna;
+    StringSet<String<Dna> > codonOrder;
+    while (!atEnd(iter))
+    {
+        clear(temp);
+        clear(tempDna);
+        if (value(iter) == '#')
+        {
+            for (; value(iter) != '\n'; ++iter) ;
+            ++iter;
+        }
+        else if (value(iter) == ';')
+        {
+            ++iter;
+            for (; value(iter) != '\n'; ++iter)
+            {
+                if(value(iter) == ';')
+                {
+                    appendValue(codonOrder, tempDna);
+                    clear(tempDna);
+                }
+                else
+                    appendValue(tempDna, value(iter));
+            }
+            appendValue(codonOrder, tempDna);
+            ++iter;
+        }
+        else
+        {
+            appendValue(tempDna, value(iter));
+            ++iter;
+            appendValue(tempDna, value(iter));
+            ++iter;
+            appendValue(tempDna, value(iter));
+            ++iter;
+
+            // ;
+            ++iter;
+            unsigned codonPos = hashCodon(tempDna);
+            for (unsigned i = 0; i < 64; ++i)
+            {
+                clear(temp);
+                for (; value(iter) != ';' && value(iter) != '\n'; ++iter)
+                {
+                    appendValue(temp, value(iter));
+                }
+                ++iter;
+                lexicalCast2(transitionProb[codonPos][hashCodon(codonOrder[i])], temp);
+            }
+        }
+    }
+    return true;
 }
 
 
@@ -151,7 +262,7 @@ AminoAcidToDna_::AminoAcidToDna_()
 int main(int argc, char const ** argv)
 {
     // Parse the command line.
-    /*seqan::ArgumentParser parser;
+    seqan::ArgumentParser parser;
     AppOptions options;
     seqan::ArgumentParser::ParseResult res = parseCommandLine(options, argc, argv);
 
@@ -166,28 +277,38 @@ int main(int argc, char const ** argv)
 
     // Print the command line arguments back to the user.
     if (options.verbosity > 0)
-    {
-        std::cout << "__OPTIONS____________________________________________________________________\n"
-                  << '\n'
-                  << "VERBOSITY\t" << options.verbosity << '\n'
-                  << "TEXT     \t" << options.text << "\n\n";
-    }*/
+        std::cout << "__OPTIONS____________________________________________________________________\n";
 
-    AminoAcidToDna_ _table;
-
-    std::cerr << toCString(_table.table[0][0]) << std::endl;
-    std::cerr << toCString(_table.table[1][1]) << std::endl;
+    // reading and creating amino acid table
+    AminoAcidToDna_ _table(options);
 
     typedef double TCargo;
     typedef Graph<Directed<TCargo> > TGraph;
     typedef VertexDescriptor<TGraph>::Type TVertexDescriptor;
-    typedef String<char> TCityName;
-    typedef String<TCityName> TProperties;
+    typedef String<String<char> > TProperties;
 
+    // Reading genome sequence.
     TProperties codons;
 
-    String<AminoAcid> text = "AR";
+    SequenceStream seqIO(toCString(options.genomeFile));
+    CharString id;
+    Dna5String seq;
+ 
+    int resRead = readRecord(id, seq, seqIO);
+    if (resRead != 0)
+    {
+        std::cerr << "ERROR: Could not read record!\n";
+        return 1;
+    }
 
+    String<AminoAcid> text;
+    translate(text, seq);
+
+    // reading codon transition probabilities
+    double transitionProb[64][64];
+    initTransitionProb(transitionProb, options);
+
+    // creating the graph
     StringSet<String<TVertexDescriptor> > vertices;
     resize(vertices, length(text) + 2);
     resize(vertices[0], 1);
@@ -196,21 +317,15 @@ int main(int argc, char const ** argv)
     TGraph g;
 
     vertices[0][0] = addVertex(g);
-    vertices[length(vertices) - 1] = addVertex(g);
+    vertices[length(vertices) - 1][0] = addVertex(g);
 
     for (unsigned i = 0; i < length(text); ++i)
     {
         resize(vertices[i + 1], length(_table.table[ordValue(text[i])]));
         for (unsigned j = 0; j < length(vertices[i + 1]); ++j)
-        {
             vertices[i + 1][j] = addVertex(g);
-            for (unsigned k = 0; k < length(vertices[i]); ++k)
-                addEdge(g, vertices[i][k], vertices[i+1][j], 1.0);
-        }
     }
 
-    for (unsigned i = 0; i < length(vertices[length(text)]) ; ++i)
-        addEdge(g, vertices[length(text)][i], vertices[length(text) + 1][0], 1.0);
 
     resizeVertexMap(g, codons);
     assignProperty(codons, vertices[0][0], "start");
@@ -219,61 +334,34 @@ int main(int argc, char const ** argv)
     {
         for (unsigned j = 0; j < length(vertices[i + 1]); ++j)
         {
-            //vertices[i + 1][j] = addVertex(g);
             assignProperty(codons, vertices[i + 1][j], _table.table[ordValue(text[i])][j]);
+            for (unsigned k = 0; k < length(vertices[i]); ++k)
+            {
+                if (i == 0)
+                    addEdge(g, vertices[i][k], vertices[i+1][j], 0.0);
+                else
+                {
+                    addEdge(g, vertices[i][k], vertices[i+1][j], transitionProb[hashCodon(getProperty(codons, vertices[i][k]))][hashCodon(getProperty(codons,vertices[i+1][j]))]);
+                }
+            }
         }
     }
 
+    for (unsigned i = 0; i < length(vertices[length(text)]) ; ++i)
+        addEdge(g, vertices[length(text)][i], vertices[length(text) + 1][0], 0.0);
+
     // Run Dijkstra's algorithm from vertex 0.
     String<unsigned> predMap;
-    String<unsigned> distMap;
+    String<double> distMap;
     InternalMap<TCargo> cargoMap;
-    dijkstra(g, 0, cargoMap, predMap, distMap);
+    bellmanFordAlgorithm(g, 0, cargoMap, predMap, distMap);
 
     // Print results to stdout.
     std::cout << "Single-Source Shortest Paths: \n";
-    typedef Iterator<TGraph, VertexIterator>::Type TVertexIterator;
-    TVertexIterator it(g);
-    while (!atEnd(it))
-    {
-        std::cout << "Path from 0 to " << getValue(it) << ": ";
-        _printPath(g,predMap,(TVertexDescriptor) 0, getValue(it));
-        std::cout << " (Distance: " << getProperty(distMap, getValue(it)) << ")\n";
-        goNext(it);
-    }
-    
+    _printPath(g,predMap,(TVertexDescriptor) 0, vertices[length(vertices) - 1][0], codons);
+    std::cout << std::endl;
 
-
-    /*TVertexDescriptor vertHamburg = addVertex(g);
-    TVertexDescriptor vertHannover = addVertex(g);
-    TVertexDescriptor vertMuenchen = addVertex(g);
-    addEdge(g, vertBerlin, vertHamburg, 289.0);
-    addEdge(g, vertHamburg, vertHannover, 289.0);
-    addEdge(g, vertHannover, vertMuenchen, 572.0);
-    */
-    /*FILE* strmWrite = fopen("graph.dot", "w");
-    write(strmWrite, g, DotDrawing());
-    fclose(strmWrite);
-    */
-    typedef Iterator<TGraph, VertexIterator>::Type TVertexIterator;
-
-   // TVertexIterator itV(g);
-    std::cout << g << std::endl;
-
-    typedef Iterator<TGraph, VertexIterator>::Type TVertexIterator;
-    TVertexIterator itV(g);
-    for(;!atEnd(itV);goNext(itV)) {
-        std::cout << value(itV) << ':' << getProperty(codons, value(itV)) << std::endl;
-    }
-
-
-    lemon::ListDigraph ga;
-    lemon::ListDigraph::Node u = ga.addNode();
-    lemon::ListDigraph::Node v = ga.addNode();
-    lemon::ListDigraph::Arc  a = ga.addArc(u, v);
-    std::cout << "Hello World! This is LEMON library here." << std::endl;
-    std::cout << "We have a directed graph with " << countNodes(ga) << " nodes "
-       << "and " << countArcs(ga) << " arc." << std::endl;
+    std::cout << "The score is: " << distMap[1] / (double)(length(text) - 1) << std::endl;
 
     return 0;
 }
