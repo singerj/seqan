@@ -302,7 +302,10 @@ void createDatabase(AppOptions const & options){
     for (unsigned i = 0; i < options.numSeqDB; ++i)
     {
         appendValue(db, '>');
-        append(db, "a\n");
+        std::stringstream ss;
+        ss << i;
+        append(db, ss.str());
+        appendValue(db, '\n');
 
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
 
@@ -366,7 +369,10 @@ void createReads(AppOptions const & options){
     for (unsigned i = 0; i < options.numSeqReads; ++i)
     {
         appendValue(reads, '>');
-        append(reads, "a\n");
+        std::stringstream ss;
+        ss << i;
+        append(reads, ss.str());
+        appendValue(reads, '\n');
 
         // distribution for read length
         Pdf<Uniform<int> > uniformInt(options.minLengthSeqReads, options.maxLengthSeqReads);
