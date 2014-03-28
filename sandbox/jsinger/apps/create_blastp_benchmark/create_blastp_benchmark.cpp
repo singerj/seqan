@@ -92,6 +92,15 @@ struct AppOptions
     // name of the file to store the frequency control    
     String<char> frequencyControl;
 
+    // indel probability
+    double indelProb;
+
+    // indel probability
+    unsigned indelMax;
+
+    // indel probability
+    unsigned indelMin;
+
     AppOptions() :
         dbFileName("db.fasta"),
         numSeqDB(100000),
@@ -104,7 +113,10 @@ struct AppOptions
         errorRate(5.0),
         alignmentQuality("alignmentQualities.txt"),
         startPosition("startPosition.txt"),
-        frequencyControl("frequencyControl.txt")
+        frequencyControl("frequencyControl.txt"),
+        indelProb(1.0),
+        indelMax(100),
+        indelMin(3)
     {}
 };
 
@@ -142,6 +154,9 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     addOption(parser, seqan::ArgParseOption("maR", "maxLengthSeqReads", "Set the maximum length of reads.", ArgParseArgument::INTEGER, "INT"));
     
     addOption(parser, seqan::ArgParseOption("er", "errorRate", "Set the error rate of the reads.", ArgParseArgument::DOUBLE, "ERROR"));
+    addOption(parser, seqan::ArgParseOption("inP", "indelProb", "Set the error rate of the reads.", ArgParseArgument::DOUBLE, "ERROR"));
+    addOption(parser, seqan::ArgParseOption("inMa", "indelMax", "Set the error rate of the reads.", ArgParseArgument::INTEGER, "ERROR"));
+    addOption(parser, seqan::ArgParseOption("inMi", "indelMin", "Set the error rate of the reads.", ArgParseArgument::INTEGER, "ERROR"));
     
     addOption(parser, seqan::ArgParseOption("aq", "alignmentQuality", "Name of the file the alignment qualities should be stored in.", ArgParseArgument::STRING, "TEXT"));
     addOption(parser, seqan::ArgParseOption("st", "startPosition", "Name of the file the alignment start positions should be stored in.", ArgParseArgument::STRING, "TEXT"));
@@ -166,11 +181,14 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     getOptionValue(options.maxLengthSeqDB, parser, "maxLengthSeqDB");
 
     getArgumentValue(options.readsFileName, parser, 1); 
-    getOptionValue(options.numSeqReads, parser, "numSeqDB");
+    getOptionValue(options.numSeqReads, parser, "numSeqReads");
     getOptionValue(options.minLengthSeqReads, parser, "minLengthSeqReads");
     getOptionValue(options.maxLengthSeqReads, parser, "maxLengthSeqReads");
 
     getOptionValue(options.errorRate, parser, "errorRate");
+    getOptionValue(options.indelProb, parser, "indelProb");
+    getOptionValue(options.indelMax, parser, "indelMax");
+    getOptionValue(options.indelMin, parser, "indelMin");
 
     getOptionValue(options.alignmentQuality, parser, "alignmentQuality");
     getOptionValue(options.startPosition, parser, "startPosition");
@@ -277,13 +295,15 @@ void createDatabase(AppOptions const & options){
     String<unsigned> dbFreq;
     resize(dbFreq, 20, 0);
 
+    Pdf<Uniform<int> > uniformInt(options.minLengthSeqDB, options.maxLengthSeqDB - 1);
+    Pdf<Uniform<double> > uniformDouble(0, 99.88);
+
     AminoAcid temp;
     for (unsigned i = 0; i < options.numSeqDB; ++i)
     {
         appendValue(db, '>');
         append(db, "a\n");
 
-        Pdf<Uniform<int> > uniformInt(options.minLengthSeqDB, options.maxLengthSeqDB - 1);
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
 
         Pdf<Uniform<double> > uniformDouble(0, 100.09);
@@ -316,70 +336,131 @@ void createReads(AppOptions const & options){
     String<char, MMap<> > reads;
     open(reads, toCString(options.readsFileName));
 
+    // distribution for ref seqeunce
     Pdf<Uniform<int> > uniformSeqIdRng(0, length(seqs) - 1);
 
+    // distribution for errors in reads
+    Pdf<Uniform<double> > uniformErrorRate(0, 100);
+
+    // distribution for indels
+    Pdf<Uniform<double> > uniformIndelRate(0, 100);
+
+
+    // distribution for indel length
+    Pdf<Uniform<int> > uniformDelInsert(0, 1);
+
+    // file for start positions
     std::ofstream outStream;
     outStream.open(toCString(options.startPosition), std::ios::out);
     outStream << "#Stores the start positions of the reads in the db (id of read/pos within read)." << std::endl;
 
+    // file for quality comparisons
     std::ofstream outStreamQual;
     outStreamQual.open(toCString(options.alignmentQuality), std::ios::out);
-    outStreamQual << "#The alignment score of the mutaten reads and the alignment score of the original read (with itself) are stored here. At the end of the file the averages are stored." << std::endl;
-    outStreamQual << "#entryLength\tnumErrors\talignScore\talignOrigScore" << std::endl;
+    outStreamQual << "#The alignment score of the mutated reads and the alignment score of the original read (with itself) are stored here. At the end of the file the averages are stored." << std::endl;
+    outStreamQual << "#entryLength\tnumErrors\talignScore\talignOrigScore\tindelLength" << std::endl;
 
     long globalAlignScore = 0;
     long globalOrigAlignScore = 0;
+    int indel = 0;
     for (unsigned i = 0; i < options.numSeqReads; ++i)
     {
         appendValue(reads, '>');
         append(reads, "a\n");
 
+        // distribution for read length
         Pdf<Uniform<int> > uniformInt(options.minLengthSeqReads, options.maxLengthSeqReads);
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
 
+        // indels
+        int indelLength = 0;
+        if (pickRandomNumber(rng, uniformIndelRate) < options.indelProb)
+        {
+            // distribution for indel length
+            Pdf<Uniform<int> > uniformIndelLength(options.indelMin, _min(options.indelMax, entryLength));
+            indelLength = pickRandomNumber(rng, uniformIndelLength);
+            if (pickRandomNumber(rng, uniformDelInsert) == 1)
+            {
+                entryLength += indelLength;
+                indel = 1;
+            }
+            else
+                indel = 2;
+        }
+
+
+        // reference sequence id
         unsigned int uniformSeqId = pickRandomNumber(rng, uniformSeqIdRng);
 
-        if (length(seqs[uniformSeqId]) - 1 < entryLength)
-            --i;
-        else
+        // check if reference sequence is at least as long as the new
+        // reads length
+        if (length(seqs[uniformSeqId]) <= entryLength)
         {
-            Pdf<Uniform<int> > uniformSeqStartRng(0, length(seqs[uniformSeqId]) - 1 - entryLength);
-            unsigned int uniformSeqStart = pickRandomNumber(rng, uniformSeqStartRng);
-
-            outStream << uniformSeqId << "\t" << uniformSeqStart << std::endl;
-
-            Pdf<Uniform<double> > uniformErrorRate(0, 100);
-
-            unsigned numErrors = 0;
-            String<AminoAcid> read;
-            for (unsigned i = 0; i < entryLength; ++i)
-            {
-                if (pickRandomNumber(rng, uniformErrorRate) < options.errorRate)
-                {
-                    appendValue(read, getAminoAcidRead(seqs[uniformSeqId][uniformSeqStart + i]));
-                    ++numErrors;
-                }
-                else 
-                    appendValue(read, seqs[uniformSeqId][uniformSeqStart + i]);
-            }
-            append(reads, read);
-            append(reads, "\n");
-
-            Align<String<AminoAcid> > align;
-            resize(rows(align), 2);
-            assignSource(row(align, 0), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
-            assignSource(row(align, 1), read);
-            Blosum62 scoringScheme;
- 
-            int alignScore = localAlignment(align, scoringScheme);
-            globalAlignScore += alignScore;
-
-            assignSource(row(align, 1), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
-            int alignOrigScore = localAlignment(align, scoringScheme);
-            globalOrigAlignScore += alignOrigScore;
-
-            outStreamQual << entryLength << "\t" << numErrors << "\t" << alignScore << "\t" << alignOrigScore << std::endl;
+            indelLength = _max(0, entryLength - length(seqs[uniformSeqId]));
+            entryLength = length(seqs[uniformSeqId]) - 1;
         }
+
+        // start position of read
+        Pdf<Uniform<int> > uniformSeqStartRng(0, length(seqs[uniformSeqId]) - 1 - entryLength);
+        unsigned int uniformSeqStart = pickRandomNumber(rng, uniformSeqStartRng);
+
+        // write start positions
+        outStream << uniformSeqId << "\t" << uniformSeqStart << std::endl;
+
+        unsigned numErrors = 0;
+        String<AminoAcid> read;
+
+        Pdf<Uniform<int> > uniformIndelStart(3, entryLength - 4 - indelLength);
+        unsigned indelStart = pickRandomNumber(rng, uniformIndelStart);
+        for (unsigned i = 0; i < entryLength; ++i)
+        {
+            // insert an error into the read
+            if (pickRandomNumber(rng, uniformErrorRate) < options.errorRate)
+            {
+                appendValue(read, getAminoAcidRead(seqs[uniformSeqId][uniformSeqStart + i]));
+                if (indel != 1 || i < indelStart || i >= indelStart + indelLength)
+                    ++numErrors;
+            }
+            else 
+                appendValue(read, seqs[uniformSeqId][uniformSeqStart + i]);
+        }
+
+        // indels
+        if (indel == 1)
+        {
+            for (unsigned i = indelStart + indelLength; i < length(read); ++i)
+                read[i - indelLength] = read[i];
+            resize(read, entryLength - indelLength);
+        }
+        else if (indel == 2)
+        {
+            for (int i = length(read) - 1; i >= indelStart + indelLength; --i)
+                read[i] = read[i - indelLength];
+            for (unsigned i = indelStart; i < indelStart + indelLength; ++i)
+            {
+                Pdf<Uniform<double> > uniformDouble(0, 99.88);
+                read[i] = getAminoAcidDB(pickRandomNumber(rng, uniformDouble));
+            }
+        }
+
+        append(reads, read);
+        append(reads, "\n");
+
+        Align<String<AminoAcid> > align;
+        resize(rows(align), 2);
+        assignSource(row(align, 0), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
+        assignSource(row(align, 1), read);
+
+        Blosum62 scoringScheme;
+
+        int alignScore = localAlignment(align, scoringScheme);
+        globalAlignScore += alignScore;
+
+        assignSource(row(align, 1), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
+        int alignOrigScore = localAlignment(align, scoringScheme);
+        globalOrigAlignScore += alignOrigScore;
+
+        outStreamQual << entryLength << "\t" << numErrors << "\t" << alignScore << "\t" << alignOrigScore << "\t" << indelLength << std::endl;
     }
     outStreamQual << globalAlignScore / options.numSeqReads << "\t" << globalOrigAlignScore / options.numSeqReads << std::endl; ;
 }
@@ -401,11 +482,23 @@ int main(int argc, char const ** argv)
         return res == seqan::ArgumentParser::PARSE_ERROR;
 
     std::cout << "Create benchmark with:\n"
-              << "numSeqDB: " << options.numSeqDB << '\n'
-              << "minLengthSeqDB: " << options.minLengthSeqDB << '\n'
-              << "maxLengthSeqDB: " << options.maxLengthSeqDB << '\n';
+                 "dbFileName: " << options.dbFileName << "\n" <<
+                 "numSeqDB: " << options.numSeqDB << "\n" <<
+                 "minLengthSeqDB: " << options.minLengthSeqDB << "\n" <<
+                 "maxLengthSeqDB: " << options.maxLengthSeqDB << "\n" <<
+                 "readsFileName: " << options.readsFileName << "\n" <<
+                 "numSeqReads: " << options.numSeqReads << "\n" <<
+                 "minLengthSeqReads: " << options.minLengthSeqReads<< "\n" <<
+                 "maxLengthSeqReads: " << options.maxLengthSeqReads<< "\n" <<
+                 "errorRate: " << options.errorRate<< "\n" <<
+                 "alignmentQuality: " << options.alignmentQuality << "\n" <<
+                 "startPosition: " << options.startPosition << "\n" <<
+                 "frequencyControl: " << options.frequencyControl << "\n" <<
+                 "indelProb:" << options.indelProb << "\n" <<
+                 "indelMax: " << options.indelMax << "\n" <<
+                 "indelMin: " << options.indelMin << std::endl;
 
-    createDatabase(options);
+              createDatabase(options);
     createReads(options);
 
     // Print the command line arguments back to the user.
