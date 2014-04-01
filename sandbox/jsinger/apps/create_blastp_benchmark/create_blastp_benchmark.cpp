@@ -206,6 +206,8 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 static String<float> freq;
 static StringSet<String<double> > dist;
 
+static Rng<MersenneTwister> rng(42);
+
 void initFreq()
 {
     // Frequencies according to: http://web.expasy.org/docs/relnotes/relstat.html (20.03.2014)
@@ -271,8 +273,7 @@ AminoAcid getAminoAcidDB(double rng)
 
 AminoAcid getAminoAcidRead(AminoAcid as)
 {
-    Rng<MersenneTwister> rng(42);
-    Pdf<Uniform<double> > uniformDouble(0, dist[(unsigned)as][19]);
+    Pdf<Uniform<double> > uniformDouble(0, dist[(unsigned)as][20]);
     double newAmino = pickRandomNumber(rng, uniformDouble);
 
     for (unsigned i = 1; i < 20; ++i)
@@ -287,7 +288,10 @@ AminoAcid getAminoAcidRead(AminoAcid as)
 
 void createDatabase(AppOptions const & options){
 
-    Rng<MersenneTwister> rng(42);
+    //Rng<MersenneTwister> rng(42);
+    
+    if (options.numSeqDB == 0)
+        return;
 
     String<char, MMap<> > db;
     open(db, toCString(options.dbFileName));
@@ -309,7 +313,6 @@ void createDatabase(AppOptions const & options){
 
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
 
-        Pdf<Uniform<double> > uniformDouble(0, 100.09);
         for (unsigned j = 0; j < entryLength; ++j)
         {
             temp = getAminoAcidDB(pickRandomNumber(rng, uniformDouble));
@@ -328,7 +331,7 @@ void createDatabase(AppOptions const & options){
 
 void createReads(AppOptions const & options){
 
-    Rng<MersenneTwister> rng(42);
+//    Rng<MersenneTwister> rng(42);
 
     SequenceStream seqStream(toCString(options.dbFileName));
     StringSet<String<char> > ids;
