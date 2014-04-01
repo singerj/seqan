@@ -205,6 +205,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 
 static String<float> freq;
 static StringSet<String<double> > dist;
+static StringSet<String<unsigned> > distControl;
 
 static Rng<MersenneTwister> rng(42);
 
@@ -254,10 +255,22 @@ void initDist(TValue const & scoreMatrix)
             if (dist[i][j + 1] == 0)
                 dist[i][j + 1] += dist[i][j];
             else
-                dist[i][j + 1] = dist[i][j] + 1 / dist[i][j + 1];
+                dist[i][j + 1] = dist[i][j] + 1.0 / dist[i][j + 1];
         }
     }
 
+}
+
+
+void initDistControl()
+{
+    resize(distControl, 20);
+    for (unsigned i = 0; i < 20; ++i)
+    {
+        resize(distControl[i], 20);
+        for(unsigned j =0; j < 20; ++j)
+            distControl[i][j] = 0;
+    }
 }
 
 AminoAcid getAminoAcidDB(double rng)
@@ -273,11 +286,14 @@ AminoAcid getAminoAcidDB(double rng)
 
 AminoAcid getAminoAcidRead(AminoAcid as)
 {
+    if (ordValue(as) > 19)
+        return as;
+
     Pdf<Uniform<double> > uniformDouble(0, dist[(unsigned)as][20]);
     double newAmino = pickRandomNumber(rng, uniformDouble);
 
     for (unsigned i = 1; i < 20; ++i)
-        if (dist[i] <= newAmino)
+        if (dist[(unsigned)as][i] <= newAmino)
             continue;
         else
             return i - 1;
@@ -285,11 +301,26 @@ AminoAcid getAminoAcidRead(AminoAcid as)
     return 19;
 }
 
+void createAminoAcidSubStat()
+{
+    std::ofstream outStream;
+    outStream.open("testSubControl.csv", std::ios::out);
+
+    for (unsigned i = 0; i < 20; ++i)
+    {
+        outStream << AminoAcid(i) << "\t";
+        double sum =0.0;
+        for (unsigned j =0; j < 20; ++j)
+            sum += static_cast<double>(distControl[i][j]);
+        for (unsigned j =0; j < 20; ++j)
+            outStream << "(" << (dist[i][j+1]-dist[i][j]) / dist[i][20] << ", " << static_cast<double>(distControl[i][j]) / sum << ")";
+        outStream << "\n";
+    }
+
+}
 
 void createDatabase(AppOptions const & options){
 
-    //Rng<MersenneTwister> rng(42);
-    
     if (options.numSeqDB == 0)
         return;
 
@@ -339,6 +370,7 @@ void createReads(AppOptions const & options){
 
     readAll(ids, seqs, seqStream);
 
+
     String<char, MMap<> > reads;
     open(reads, toCString(options.readsFileName));
 
@@ -368,9 +400,10 @@ void createReads(AppOptions const & options){
 
     long globalAlignScore = 0;
     long globalOrigAlignScore = 0;
-    int indel = 0;
+    int indel;
     for (unsigned i = 0; i < options.numSeqReads; ++i)
     {
+        indel = 0;
         appendValue(reads, '>');
         std::stringstream ss;
         ss << i;
@@ -405,9 +438,17 @@ void createReads(AppOptions const & options){
         // reads length
         if (length(seqs[uniformSeqId]) <= entryLength)
         {
-            indelLength = _max(0, entryLength - length(seqs[uniformSeqId]));
             entryLength = length(seqs[uniformSeqId]) - 1;
+//            indelLength = _max(0, entryLength - length(seqs[uniformSeqId]));
         }
+
+        if (entryLength < 7)
+        {
+            indel = 0;
+            indelLength = 0;
+        }
+        else if (entryLength - 6 < indelLength)
+            indelLength = entryLength - 6;
 
         // start position of read
         Pdf<Uniform<int> > uniformSeqStartRng(0, length(seqs[uniformSeqId]) - 1 - entryLength);
@@ -417,9 +458,9 @@ void createReads(AppOptions const & options){
         outStream << uniformSeqId << "\t" << uniformSeqStart << std::endl;
 
         unsigned numErrors = 0;
-        String<AminoAcid> read;
+        String<char> read;
 
-        Pdf<Uniform<int> > uniformIndelStart(3, entryLength - 4 - indelLength);
+        Pdf<Uniform<int> > uniformIndelStart(3, entryLength - 3 - indelLength);
         unsigned indelStart = pickRandomNumber(rng, uniformIndelStart);
         for (unsigned i = 0; i < entryLength; ++i)
         {
@@ -428,10 +469,15 @@ void createReads(AppOptions const & options){
             {
                 appendValue(read, getAminoAcidRead(seqs[uniformSeqId][uniformSeqStart + i]));
                 if (indel != 1 || i < indelStart || i >= indelStart + indelLength)
+                {
                     ++numErrors;
+                    //++distControl[ordValue(static_cast<AminoAcid>(seqs[uniformSeqId][uniformSeqStart + i]))][ordValue(static_cast<AminoAcid>(read[length(read) - 1]))];
+                }
             }
             else 
+            {
                 appendValue(read, seqs[uniformSeqId][uniformSeqStart + i]);
+            }
         }
 
         // indels
@@ -510,8 +556,19 @@ int main(int argc, char const ** argv)
               createDatabase(options);
     createReads(options);
 
-    // Print the command line arguments back to the user.
+    //testing only
+    /*
+    initDistControl();
+    Pdf<Uniform<unsigned> > uniformAmino(0, 19);
+    for (unsigned i = 0; i < 1000000; ++i)
+    {
+        AminoAcid aminoAcid(pickRandomNumber(rng, uniformAmino));
+        ++distControl[(int)aminoAcid][(int)getAminoAcidRead(aminoAcid)];
+    }
 
+    createAminoAcidSubStat();
+    // Print the command line arguments back to the user.
+    */
     return 0;
 }
 
