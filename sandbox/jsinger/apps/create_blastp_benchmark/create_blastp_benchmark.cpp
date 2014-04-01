@@ -404,12 +404,7 @@ void createReads(AppOptions const & options){
     for (unsigned i = 0; i < options.numSeqReads; ++i)
     {
         indel = 0;
-        appendValue(reads, '>');
-        std::stringstream ss;
-        ss << i;
-        append(reads, ss.str());
-        appendValue(reads, '\n');
-
+        
         // distribution for read length
         Pdf<Uniform<int> > uniformInt(options.minLengthSeqReads, options.maxLengthSeqReads);
         unsigned entryLength = pickRandomNumber(rng, uniformInt);
@@ -438,84 +433,93 @@ void createReads(AppOptions const & options){
         // reads length
         if (length(seqs[uniformSeqId]) <= entryLength)
         {
-            entryLength = length(seqs[uniformSeqId]) - 1;
+            --i;
+            //entryLength = length(seqs[uniformSeqId]) - 1;
 //            indelLength = _max(0, entryLength - length(seqs[uniformSeqId]));
         }
-
-        if (entryLength < 7)
+        else
         {
-            indel = 0;
-            indelLength = 0;
-        }
-        else if (entryLength - 6 < indelLength)
-            indelLength = entryLength - 6;
+            appendValue(reads, '>');
+            std::stringstream ss;
+            ss << i;
+            append(reads, ss.str());
+            appendValue(reads, '\n');
 
-        // start position of read
-        Pdf<Uniform<int> > uniformSeqStartRng(0, length(seqs[uniformSeqId]) - 1 - entryLength);
-        unsigned int uniformSeqStart = pickRandomNumber(rng, uniformSeqStartRng);
-
-        // write start positions
-        outStream << uniformSeqId << "\t" << uniformSeqStart << std::endl;
-
-        unsigned numErrors = 0;
-        String<char> read;
-
-        Pdf<Uniform<int> > uniformIndelStart(3, entryLength - 3 - indelLength);
-        unsigned indelStart = pickRandomNumber(rng, uniformIndelStart);
-        for (unsigned i = 0; i < entryLength; ++i)
-        {
-            // insert an error into the read
-            if (pickRandomNumber(rng, uniformErrorRate) < options.errorRate)
+            if (entryLength < 7)
             {
-                appendValue(read, getAminoAcidRead(seqs[uniformSeqId][uniformSeqStart + i]));
-                if (indel != 1 || i < indelStart || i >= indelStart + indelLength)
+                indel = 0;
+                indelLength = 0;
+            }
+            else if (entryLength - 6 < indelLength)
+                indelLength = entryLength - 6;
+
+            // start position of read
+            Pdf<Uniform<int> > uniformSeqStartRng(0, length(seqs[uniformSeqId]) - 1 - entryLength);
+            unsigned int uniformSeqStart = pickRandomNumber(rng, uniformSeqStartRng);
+
+            // write start positions
+            outStream << uniformSeqId << "\t" << uniformSeqStart << std::endl;
+
+            unsigned numErrors = 0;
+            String<char> read;
+
+            Pdf<Uniform<int> > uniformIndelStart(3, entryLength - 3 - indelLength);
+            unsigned indelStart = pickRandomNumber(rng, uniformIndelStart);
+            for (unsigned i = 0; i < entryLength; ++i)
+            {
+                // insert an error into the read
+                if (pickRandomNumber(rng, uniformErrorRate) < options.errorRate)
                 {
-                    ++numErrors;
-                    //++distControl[ordValue(static_cast<AminoAcid>(seqs[uniformSeqId][uniformSeqStart + i]))][ordValue(static_cast<AminoAcid>(read[length(read) - 1]))];
+                    appendValue(read, getAminoAcidRead(seqs[uniformSeqId][uniformSeqStart + i]));
+                    if (indel != 1 || i < indelStart || i >= indelStart + indelLength)
+                    {
+                        ++numErrors;
+                        //++distControl[ordValue(static_cast<AminoAcid>(seqs[uniformSeqId][uniformSeqStart + i]))][ordValue(static_cast<AminoAcid>(read[length(read) - 1]))];
+                    }
+                }
+                else 
+                {
+                    appendValue(read, seqs[uniformSeqId][uniformSeqStart + i]);
                 }
             }
-            else 
+
+            // indels
+            if (indel == 1)
             {
-                appendValue(read, seqs[uniformSeqId][uniformSeqStart + i]);
+                for (unsigned i = indelStart + indelLength; i < length(read); ++i)
+                    read[i - indelLength] = read[i];
+                resize(read, entryLength - indelLength);
             }
-        }
-
-        // indels
-        if (indel == 1)
-        {
-            for (unsigned i = indelStart + indelLength; i < length(read); ++i)
-                read[i - indelLength] = read[i];
-            resize(read, entryLength - indelLength);
-        }
-        else if (indel == 2)
-        {
-            for (int i = length(read) - 1; i >= indelStart + indelLength; --i)
-                read[i] = read[i - indelLength];
-            for (unsigned i = indelStart; i < indelStart + indelLength; ++i)
+            else if (indel == 2)
             {
-                Pdf<Uniform<double> > uniformDouble(0, 99.88);
-                read[i] = getAminoAcidDB(pickRandomNumber(rng, uniformDouble));
+                for (int i = length(read) - 1; i >= indelStart + indelLength; --i)
+                    read[i] = read[i - indelLength];
+                for (unsigned i = indelStart; i < indelStart + indelLength; ++i)
+                {
+                    Pdf<Uniform<double> > uniformDouble(0, 99.88);
+                    read[i] = getAminoAcidDB(pickRandomNumber(rng, uniformDouble));
+                }
             }
+
+            append(reads, read);
+            append(reads, "\n");
+
+            Align<String<AminoAcid> > align;
+            resize(rows(align), 2);
+            assignSource(row(align, 0), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
+            assignSource(row(align, 1), read);
+
+            Blosum62 scoringScheme;
+
+            int alignScore = localAlignment(align, scoringScheme);
+            globalAlignScore += alignScore;
+
+            assignSource(row(align, 1), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
+            int alignOrigScore = localAlignment(align, scoringScheme);
+            globalOrigAlignScore += alignOrigScore;
+
+            outStreamQual << entryLength << "\t" << numErrors << "\t" << alignScore << "\t" << alignOrigScore << "\t" << indelLength << std::endl;
         }
-
-        append(reads, read);
-        append(reads, "\n");
-
-        Align<String<AminoAcid> > align;
-        resize(rows(align), 2);
-        assignSource(row(align, 0), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
-        assignSource(row(align, 1), read);
-
-        Blosum62 scoringScheme;
-
-        int alignScore = localAlignment(align, scoringScheme);
-        globalAlignScore += alignScore;
-
-        assignSource(row(align, 1), infix(seqs[uniformSeqId], uniformSeqStart, uniformSeqStart + entryLength));
-        int alignOrigScore = localAlignment(align, scoringScheme);
-        globalOrigAlignScore += alignOrigScore;
-
-        outStreamQual << entryLength << "\t" << numErrors << "\t" << alignScore << "\t" << alignOrigScore << "\t" << indelLength << std::endl;
     }
     outStreamQual << globalAlignScore / options.numSeqReads << "\t" << globalOrigAlignScore / options.numSeqReads << std::endl; ;
 }
