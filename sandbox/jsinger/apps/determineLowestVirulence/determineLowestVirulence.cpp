@@ -184,8 +184,8 @@ AminoAcidToDna_::AminoAcidToDna_(AppOptions const & options)
     }
 }
 
-template <typename TValue>
-unsigned hashCodon(String<TValue> const & codon)
+template <typename TSequence>
+unsigned hashCodon(TSequence const & codon)
 {
     return ordValue(Dna(codon[2])) + 4 * ordValue(Dna(codon[1])) + 16 * ordValue(Dna(codon[0]));
 }
@@ -308,6 +308,14 @@ int main(int argc, char const ** argv)
     double transitionProb[64][64];
     initTransitionProb(transitionProb, options);
 
+    // only for testing
+    // computing the score of the original seqeunce
+    double score = 0;
+    for (unsigned i = 3; i < length(seq); i += 3)
+        score += transitionProb[hashCodon(infix(seq, i-3, i))][hashCodon(infix(seq, i, i+3))];
+    std::cerr << "The score of the provided sequence is: " << score / (((double)length(seq) / 3.0) - 1.0) << std::endl;
+
+
     // creating the graph
     StringSet<String<TVertexDescriptor> > vertices;
     resize(vertices, length(text) + 2);
@@ -357,7 +365,7 @@ int main(int argc, char const ** argv)
     bellmanFordAlgorithm(g, 0, cargoMap, predMap, distMap);
 
     // Print results to stdout.
-    std::cout << "Single-Source Shortest Paths: \n";
+    std::cout << "The computed sequence is: \n";
     _printPath(g,predMap,(TVertexDescriptor) 0, vertices[length(vertices) - 1][0], codons);
     std::cout << std::endl;
 
