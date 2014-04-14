@@ -44,6 +44,9 @@
 
 #include <lemon/list_graph.h>
 
+#include "gurobi_c++.h"
+using namespace std;
+
 using namespace seqan;
 
 // ==========================================================================
@@ -185,6 +188,13 @@ AminoAcidToDna_::AminoAcidToDna_(AppOptions const & options)
 }
 
 template <typename TSequence>
+bool isSameAS(TSequence const & codon1, TSequence const & codon2)
+{
+   return TranslateTableDnaToAminoAcid_<GeneticCode<Canonical> >::VALUE[ordValue(Dna(codon1[0]))][ordValue(Dna(codon1[1]))][ordValue(Dna(codon1[2]))] == 
+          TranslateTableDnaToAminoAcid_<GeneticCode<Canonical> >::VALUE[ordValue(Dna(codon2[0]))][ordValue(Dna(codon2[1]))][ordValue(Dna(codon2[2]))];
+}
+
+template <typename TSequence>
 unsigned hashCodon(TSequence const & codon)
 {
     return ordValue(Dna(codon[2])) + 4 * ordValue(Dna(codon[1])) + 16 * ordValue(Dna(codon[0]));
@@ -250,6 +260,55 @@ bool initTransitionProb(double (&transitionProb)[64][64], AppOptions const & opt
         }
     }
     return true;
+}
+
+template<typename TValue>
+GRBLinExpr comp(TValue x, TValue y, TValue z)
+{
+    return x + y + 2 * z;
+}
+
+template<typename TValue>
+GRBLinExpr coloumnsConstraints(String<TValue> const & columns)
+{
+    GRBLinExpr temp = 0.0;
+    for (unsigned i = 0; i < length(columns); ++i)
+        temp += columns[i];
+    return temp;
+}
+
+template<typename TValue>
+GRBQuadExpr edgeConstraints(StringSet<String<TValue> > const & columns, StringSet<String<TValue> > const & edges, unsigned column, bool left)
+{
+    GRBQuadExpr temp = 0.0;
+    if (left)
+    {
+        for (unsigned i = 0; i < length(columns[column]); ++i)
+            for (unsigned j = 0; j < length(columns[column + 1]); ++j)
+                temp += columns[column][i] * edges[column][length(columns[column + 1]) * i + j];
+    }
+    else 
+    {
+        for (unsigned j = 0; j < length(columns[column]); ++j)
+            for (unsigned i = 0; i < length(columns[column - 1]); ++i)
+                temp += columns[column][j] * edges[column - 1][length(columns[column]) * i + j];
+    }
+    return temp;
+}
+
+
+template<typename TValue, typename TValue2, typename TSequence>
+GRBLinExpr objective(double (&transitionProb)[64][64], StringSet<String<TValue> > const & edges, StringSet<String<TValue2> > const & ids, TSequence const & seq)
+{
+    GRBLinExpr temp = 0.0;
+    for (unsigned i = 1; i < length(ids); ++i)
+        for (unsigned j = 0; j < length(ids[i - 1]); ++j)
+            for (unsigned k = 0; k < length(ids[i]); ++k)
+            {
+                temp += edges[i - 1][length(ids[i]) * j + k] * transitionProb[hashCodon(infix(seq, ids[i - 1][j], ids[i - 1][j] + 3))][hashCodon(infix(seq, ids[i][k], ids[i][k] + 3))];
+               // std::cerr << temp << std::endl;
+            }
+    return temp;
 }
 
 
@@ -370,6 +429,121 @@ int main(int argc, char const ** argv)
     std::cout << std::endl;
 
     std::cout << "The score is: " << distMap[1] / (double)(length(text) - 1) << std::endl;
+
+    try {
+
+        std::cerr << isSameAS(infix(text, 0, 3), infix(text, 3, 6)) << std::endl;
+
+        GRBEnv env = GRBEnv();
+
+        GRBModel model = GRBModel(env);
+
+        // Create variables
+
+        StringSet<String<GRBVar> > grbVarsColumns;
+        StringSet<String<GRBVar> > grbVarsRows;
+        StringSet<String<unsigned> > ids;
+
+        resize(grbVarsColumns, length(seq) / 3);
+        resize(ids, length(seq) / 3);
+        resize(grbVarsRows,length(seq) / 3);
+        GRBVar temp;
+        for (unsigned i = 0; i < length(seq); i += 3)
+        {
+            for (unsigned j = 0; j < length(seq); j += 3)
+            {
+                if (isSameAS(infix(seq, i, i + 3), infix(seq, j, j+ 3)))
+                {
+                    temp = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+                    appendValue(grbVarsColumns[i/3], temp);
+                    appendValue(ids[i/3], j);
+                    appendValue(grbVarsRows[j / 3], temp);
+                }
+            }
+        }
+       
+        StringSet<String<GRBVar> > grbVarsEdges;
+        resize(grbVarsEdges, length(ids) - 1);
+        for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+        {
+            for (unsigned j = 0; j < length(ids[i]); ++j)
+                for (unsigned k = 0; k < length(ids[i + 1]); ++k)
+                    appendValue(grbVarsEdges[i], model.addVar(0.0, 1.0, 0.0, GRB_BINARY));
+        }
+
+        // Integrate new variables
+        model.update();
+
+        model.setObjective(objective(transitionProb,grbVarsEdges, ids, seq), GRB_MINIMIZE);
+
+        // Add constraint: x + 2 y + 3 z <= 4
+        for (unsigned i = 0; i < length(grbVarsColumns); ++i)
+            model.addConstr(coloumnsConstraints(grbVarsColumns[i]) == 1);
+        
+        for (unsigned i = 0; i < length(grbVarsRows); ++i)
+            model.addConstr(coloumnsConstraints(grbVarsRows[i]) == 1);
+        
+        for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+            model.addQConstr(edgeConstraints(grbVarsColumns, grbVarsEdges, i, true) == 1);
+        
+        for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+            model.addQConstr(edgeConstraints(grbVarsColumns, grbVarsEdges, i + 1, false) == 1);
+
+        for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+            model.addConstr(coloumnsConstraints(grbVarsEdges[i]) == 1);
+
+
+        // Optimize model
+
+        /*
+        for (unsigned i = 0; i < length(ids); ++i)
+        {
+            std::cerr << i << "\t";
+            for (unsigned j = 0; j < length(ids[i]); ++j)
+                std::cerr << ids[i][j] << "\t";
+            std::cerr << std::endl;
+        }*/
+
+        model.optimize();
+
+        cout << "Obj: " << model.get(GRB_DoubleAttr_ObjVal) / (double)(length(seq) / 3 - 1) << endl;
+
+        
+        for (unsigned i = 0; i < length(grbVarsColumns) - 1; ++i)
+            for (unsigned j = 0; j < length(grbVarsColumns[i]); ++j)
+                //for (unsigned k = 0; k < length(grbVarsColumns[i + 1]); ++k)
+                {
+                    //std::cerr << "i: " << i << "\tj: " << j << "\tk: " << k << "\t" << grbVarsColumns[i][j].get(GRB_DoubleAttr_X) << "\t" << grbVarsColumns[i + 1][k].get(GRB_DoubleAttr_X) << "\t" << grbVarsEdges[i][j*length(grbVarsColumns[i + 1]) + k].get(GRB_DoubleAttr_X) << std::endl;
+                    if (grbVarsColumns[i][j].get(GRB_DoubleAttr_X) != 0)
+                        std::cerr << i << " " << j << " " << ids[i][j]/3 << " " << infix(seq, ids[i][j], ids[i][j] + 3) << std::endl;
+//                    char c;
+//                    std::cin>>c;
+                }
+       
+         /*
+        for (unsigned i = 0; i < length(grbVarsColumns) - 1; ++i)
+         {
+            for (unsigned j = 0; j < length(grbVarsColumns[i]); ++j)
+                std::cerr << grbVarsColumns[i][j].get(GRB_DoubleAttr_X) << "\t";
+            std::cerr << std::endl;
+         }
+         for (unsigned i = 0; i < length(grbVarsColumns) - 1; ++i)
+         {
+            for (unsigned j = 0; j < length(grbVarsRows[i]); ++j)
+                std::cerr << grbVarsRows[i][j].get(GRB_DoubleAttr_X) << "\t";
+            std::cerr << std::endl;
+         }
+        */
+
+
+    } catch(GRBException e) 
+    {
+            cout << "Error code = " << e.getErrorCode() << endl;
+            cout << e.getMessage() << endl;
+    } catch(...) 
+    {
+        cout << "Exception during optimization" << endl;
+    }
 
     return 0;
 }
