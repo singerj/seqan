@@ -1,0 +1,80 @@
+# ===========================================================================
+#                  SeqAn - The Library for Sequence Analysis
+# ===========================================================================
+# File: /extras/apps/seqan_flexbar/CMakeLists.txt
+#
+# CMakeLists.txt file for seqan_flexbar.
+# ===========================================================================
+
+cmake_minimum_required (VERSION 2.8.2)
+project (seqan_extras_apps_seqan_flexbar)
+message (STATUS "Configuring extras/apps/seqan_flexbar")
+
+# ----------------------------------------------------------------------------
+# Dependencies
+# ----------------------------------------------------------------------------
+
+# Search SeqAn and select dependencies.
+#set (SEQAN_FIND_DEPENDENCIES NONE)
+find_package (SeqAn REQUIRED)
+
+# ----------------------------------------------------------------------------
+# Build Setup
+# ----------------------------------------------------------------------------
+
+# Add include directories.
+include_directories (${SEQAN_INCLUDE_DIRS})
+
+# Add definitions set by find_package (SeqAn).
+add_definitions (${SEQAN_DEFINITIONS})
+
+# Update the list of file names below if you add source files to your application.
+add_executable (seqan_flexbar seqan_flexbar.cpp)
+
+# Add dependencies found by find_package (SeqAn).
+target_link_libraries (seqan_flexbar ${SEQAN_LIBRARIES})
+
+# Add CXX flags found by find_package (SeqAn).
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SEQAN_CXX_FLAGS}")
+
+# ----------------------------------------------------------------------------
+# Installation
+# ----------------------------------------------------------------------------
+
+# Set variables for installing, depending on the selected build type.
+if (NOT SEQAN_PREFIX_SHARE_DOC)
+  seqan_setup_install_vars (seqan_flexbar)
+endif (NOT SEQAN_PREFIX_SHARE_DOC)
+
+# Install seqan_flexbar in ${PREFIX}/bin directory
+install (TARGETS seqan_flexbar
+         DESTINATION bin)
+
+# Install non-binary files for the package to "." for app builds and
+# ${PREFIX}/share/doc/seqan_flexbar for SeqAn release builds.
+install (FILES LICENSE
+               README
+         DESTINATION ${SEQAN_PREFIX_SHARE_DOC})
+#install (FILES example/fasta1.fa
+#               example/fasta2.fa
+#         DESTINATION ${SEQAN_PREFIX_SHARE_DOC}/example)
+
+# ----------------------------------------------------------------------------
+# App Test
+# ----------------------------------------------------------------------------
+
+#seqan_add_app_test (seqan_flexbar)
+
+# ----------------------------------------------------------------------------
+# CPack Install
+# ----------------------------------------------------------------------------
+
+if (SEQAN_BUILD_SYSTEM STREQUAL "APP:seqan_flexbar")
+  set (CPACK_PACKAGE_NAME "seqan_flexbar")
+  set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "seqan_flexbar")
+  set (CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.net>")
+  set (CPACK_PACKAGE_VENDOR "Your Name <your.email@example.net>")
+
+  seqan_configure_cpack_app (seqan_flexbar "seqan_flexbar")
+endif (SEQAN_BUILD_SYSTEM STREQUAL "APP:seqan_flexbar")
+
