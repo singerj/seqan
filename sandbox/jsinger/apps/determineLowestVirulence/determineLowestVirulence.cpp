@@ -453,7 +453,7 @@ int main(int argc, char const ** argv)
         {
             for (unsigned j = 0; j < length(seq); j += 3)
             {
-                if (isSameAS(infix(seq, i, i + 3), infix(seq, j, j+ 3)))
+                if ( ( (i == j) || (infix(seq, i, i + 3) != infix(seq, j, j + 3) ) ) && isSameAS(infix(seq, i, i + 3), infix(seq, j, j+ 3)))
                 {
                     temp = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
                     appendValue(grbVarsColumns[i/3], temp);
@@ -462,6 +462,8 @@ int main(int argc, char const ** argv)
                 }
             }
         }
+
+        std::cerr << "LengthSum: " << lengthSum(grbVarsColumns) << std::endl;
        
         StringSet<String<GRBVar> > grbVarsEdges;
         resize(grbVarsEdges, length(ids) - 1);
