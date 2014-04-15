@@ -67,11 +67,10 @@ struct AppOptions
     int verbosity;
 
     // The first (and only) argument of the program is stored here.
-    seqan::CharString text;
-
     String<char> codonTable;
     String<char> genomeFile;
     String<char> probFile;
+    String<char> outFileName;
 
     AppOptions() :
         verbosity(1)
@@ -110,6 +109,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     addOption(parser, seqan::ArgParseOption("ct", "codonTable", "Name of the file the codon table is stored in.", ArgParseArgument::STRING, "TEXT"));
     addOption(parser, seqan::ArgParseOption("i", "genomeTable", "Name of the genome file.", ArgParseArgument::STRING, "TEXT"));
     addOption(parser, seqan::ArgParseOption("pf", "probFile", "Name of the probability file.", ArgParseArgument::STRING, "TEXT"));
+    addOption(parser, seqan::ArgParseOption("o", "outFileName", "Name of the output file.", ArgParseArgument::STRING, "TEXT"));
 
     // Add Examples Section.
     addTextSection(parser, "Examples");
@@ -135,6 +135,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     getOptionValue(options.codonTable, parser, "ct");
     getOptionValue(options.genomeFile, parser, "i");
     getOptionValue(options.probFile, parser, "pf");
+    getOptionValue(options.outFileName, parser, "o");
 
     return seqan::ArgumentParser::PARSE_OK;
 }
@@ -508,17 +509,35 @@ int main(int argc, char const ** argv)
 
         cout << "Obj: " << model.get(GRB_DoubleAttr_ObjVal) / (double)(length(seq) / 3 - 1) << endl;
 
-        
+       
+        String<char, MMap<> > outString;
+        open(outString, toCString(options.outFileName));
+        appendValue(outString, '>');
+        append(outString, id);
+        appendValue(outString, '\n');
+
         for (unsigned i = 0; i < length(grbVarsColumns) - 1; ++i)
             for (unsigned j = 0; j < length(grbVarsColumns[i]); ++j)
                 //for (unsigned k = 0; k < length(grbVarsColumns[i + 1]); ++k)
                 {
                     //std::cerr << "i: " << i << "\tj: " << j << "\tk: " << k << "\t" << grbVarsColumns[i][j].get(GRB_DoubleAttr_X) << "\t" << grbVarsColumns[i + 1][k].get(GRB_DoubleAttr_X) << "\t" << grbVarsEdges[i][j*length(grbVarsColumns[i + 1]) + k].get(GRB_DoubleAttr_X) << std::endl;
                     if (grbVarsColumns[i][j].get(GRB_DoubleAttr_X) != 0)
-                        std::cerr << i << " " << j << " " << ids[i][j]/3 << " " << infix(seq, ids[i][j], ids[i][j] + 3) << std::endl;
+                    {
+                        //std::cerr << i << " " << j << " " << ids[i][j]/3 << " " << infix(seq, ids[i][j], ids[i][j] + 3) << std::endl;
+                        append(outString, infix(seq, ids[i][j], ids[i][j] + 3));
+                    }
 //                    char c;
 //                    std::cin>>c;
                 }
+        
+        for (unsigned j = 0; j < length(grbVarsColumns[length(grbVarsColumns) - 1]); ++j)
+        {
+            if (grbVarsColumns[length(grbVarsColumns) - 1][j].get(GRB_DoubleAttr_X) != 0)
+            {
+                std::cerr << j << std::endl;
+                append(outString, infix(seq, ids[length(grbVarsColumns) - 1][j], ids[length(grbVarsColumns) - 1][j] + 3));
+            }
+        }
        
          /*
         for (unsigned i = 0; i < length(grbVarsColumns) - 1; ++i)

@@ -129,6 +129,12 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     return seqan::ArgumentParser::PARSE_OK;
 }
 
+template <typename TSequence>
+unsigned hashCodon(TSequence const & codon)
+{
+    return ordValue(Dna(codon[2])) + 4 * ordValue(Dna(codon[1])) + 16 * ordValue(Dna(codon[0]));
+}
+
 // --------------------------------------------------------------------------
 // Function main()
 // --------------------------------------------------------------------------
@@ -165,6 +171,11 @@ int main(int argc, char const ** argv)
     String<AminoAcid> textGold;
     translate(textGold, seqGold);
 
+    String<unsigned> freqGold;
+    resize(freqGold, 64, 0);
+    for (unsigned i = 0; i < length(seqGold); i += 3)
+        ++freqGold[hashCodon(infix(seqGold, i, i + 3))];
+
     for (unsigned i = 0; i < length(options.compTextFiles); ++i)
     {
         
@@ -181,6 +192,11 @@ int main(int argc, char const ** argv)
 
         String<AminoAcid> textComp;
         translate(textComp, seqComp);
+    
+        String<unsigned> freqComp;
+        resize(freqComp, 64, 0);
+        for (unsigned j = 0; j < length(seqComp); j += 3)
+            ++freqComp[hashCodon(infix(seqComp, j, j + 3))];
 
         if (textComp != textGold)
         {
@@ -188,6 +204,10 @@ int main(int argc, char const ** argv)
             std::cout << textGold << std::endl;
             std::cout << "vs" << std::endl;
             std::cout << textComp << std::endl;
+        }
+        else if (freqGold != freqComp)
+        {
+            std::cout << "The files: " << options.goldTextFile << " and " << options.compTextFiles[i] << " have different codon frequencies." << std::endl;
         }
         else
         {
