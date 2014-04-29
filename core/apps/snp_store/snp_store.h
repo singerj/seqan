@@ -26,15 +26,16 @@
 
 #include <iostream>
 #include <fstream>
-#include <math.h>
 #include <cmath>
 
 #include <seqan/misc/misc_svg.h>
 #include <seqan/stream.h>
+#include <boost/math/special_functions/fpclassify.hpp>
 
 #ifdef CORRECTED_HET
 #include <boost/math/distributions.hpp>
 #endif
+
 namespace SEQAN_NAMESPACE_MAIN
 {
 
@@ -291,7 +292,7 @@ struct FragmentStoreConfig<SnpStoreGroupSpec_> :
             indelPercentageT = (float) 0.25;
             indelCountThreshold = 3;
             indelWindow = 0;            // off
-            indelHetMax = 0.70;
+            indelHetMax = 0.70f;
             
             windowSize = 1000000;
             windowBuff = 70;
@@ -1902,18 +1903,12 @@ lgamma(TVal x)
 
 #endif
 
-template<typename TValue>
-inline bool my_isnan(TValue value)
-{
-    return value != value;
-}
-
-
 
 // function taken from keith b. hall, computation of probs in log-space
 template<typename TValue>
 inline TValue
-logSum(TValue x, TValue y) {
+logSum(TValue x, TValue y)
+{
     // If one value is much smaller than the other, keep the larger value.
     if (x < (y - log(1e200)))
         return y;
@@ -1921,7 +1916,7 @@ logSum(TValue x, TValue y) {
         return x;
     double diff = x - y;
     double retVal;
-    if (!finite((double)exp(diff))) // difference is too large
+    if (!std::isfinite((double)exp(diff))) // difference is too large
         return (x > y ? x : y);
     // otherwise return the sum.
     retVal = (double)(y + log((double)(1.0) + exp(diff)));
@@ -1988,7 +1983,7 @@ void computeCnks(THomoTable & cnks, TDependencies & fks, TOptions & options)
             { 
                 temp[k] = -4.343 * logl(1.0 - expl(lFks[k] * logl(beta[k])));
                 cnks[q<<16|n<<8|k] = (k > 0 ? q_c[k-1] : 0);// + temp[k]; 
-                cnks[q<<16|n<<8|k] += (my_isnan(temp[k]) ? 0 : temp[k]);
+                cnks[q<<16|n<<8|k] += (boost::math::isnan(temp[k]) ? 0 : temp[k]);
             }
             
         }
@@ -2263,9 +2258,9 @@ getHomoProbs(THomoTable & cnks,
     if(extraV)std::cout << "totalCount" <<  countTotal << " countBest"<< countBest << " countSecondBest"<< countSecondBest << "\n";
 #endif
     probQ1 = ((countSecondBest > 0) ? sumE[secondBest] : 0);
-    probQ1 += (my_isnan(cnks[qAvgSecondBest<<16|countTotal<<8|countSecondBest])) ? 0 : cnks[qAvgSecondBest<<16|countTotal<<8|countSecondBest];
+    probQ1 += (boost::math::isnan(cnks[qAvgSecondBest<<16|countTotal<<8|countSecondBest])) ? 0 : cnks[qAvgSecondBest<<16|countTotal<<8|countSecondBest];
     probQ2 = ((countBest > 0) ? sumE[best] : 0);
-    probQ2 += (my_isnan(cnks[qAvgBest<<16|countTotal<<8|countBest])) ? 0 : cnks[qAvgBest<<16|countTotal<<8|countBest];
+    probQ2 += (boost::math::isnan(cnks[qAvgBest<<16|countTotal<<8|countBest])) ? 0 : cnks[qAvgBest<<16|countTotal<<8|countBest];
     
 #ifdef SNPSTORE_DEBUG_CANDPOS
     if(extraV)std::cout << "cnkBest" <<  cnks[qAvgBest<<16|countTotal<<8|countBest] << "  bei cnkindex " <<(qAvgBest<<16|countTotal<<8|countBest)<<"\n";
@@ -3835,7 +3830,7 @@ calibrateQuality(TRead & read, TMatchQuality & matchQuality, int originalQuality
 {
     double epsilon = (double)(matchQuality.errors)/length(read);
     //return ( (int)((double) (epsilon*100.0) * (int) matchQuality.score / pow(2.0,(100.0*epsilon - 1.0)) + (double)originalQuality ) / (double)(100.0* epsilon + 1.0));
-    return ( (int)((double) (epsilon*options.newQualityCalibrationFactor) * (int) matchQuality.score / pow(2.0,(20.0*options.newQualityCalibrationFactor - 1.0)) + (double)originalQuality ) / (double)(20.0* options.newQualityCalibrationFactor+ 1.0));
+    return (int)( (int)((double) (epsilon*options.newQualityCalibrationFactor) * (int) matchQuality.score / pow(2.0,(20.0*options.newQualityCalibrationFactor - 1.0)) + (double)originalQuality ) / (double)(20.0* options.newQualityCalibrationFactor+ 1.0));
     
 }
 
@@ -4306,7 +4301,7 @@ convertMatchesToGlobalAlignment(fragmentStore, scoreType, Nothing());
 #ifdef SNPSTORE_DEBUG
                     if(extraVVVV) std::cout <<"del readPos = " << readPos  << "readlength=" << length(reads[(*matchIt).readId]) << std::endl;
 #endif
-                    quality = (int)((double)getQualityValue(reads[(*matchIt).readId][readPos-1]) + getQualityValue(reads[(*matchIt).readId][readPos])) / 2.0;
+                    quality = (getQualityValue(reads[(*matchIt).readId][readPos-1]) + getQualityValue(reads[(*matchIt).readId][readPos])) / 2;
                     if(orientation == 'F')
                     {
                         indelQualF += quality;
@@ -4515,7 +4510,7 @@ convertMatchesToGlobalAlignment(fragmentStore, scoreType, Nothing());
                     ++indelSize;
                     depth += (indelConsens[candidateViewPos].i2 & 255);
                     percentage += (float)((indelConsens[candidateViewPos].i2 >> 8) & 255);
-                    quality += (float)((indelConsens[candidateViewPos].i1 >> 8) & 255);
+                    quality += ((indelConsens[candidateViewPos].i1 >> 8) & 255);
                     bsi = bsi && (((indelConsens[candidateViewPos].i1 >> 4) & 1) == 1 );
                 }
                 ++candidateViewPos;
@@ -4530,7 +4525,7 @@ convertMatchesToGlobalAlignment(fragmentStore, scoreType, Nothing());
                     percentage = percentage/(float)depth; // low coverage positions get a lower weight here
                     depth = (unsigned)round(depth/indelSize);   // coverage is spread over all positions
                     quality = (int)round(quality/indelSize);   // quality is spread over all positions
-                    int indelQ = (quality * percentage);
+                    int indelQ = (int)(quality * percentage);
                     if(!bsi) indelQ /= 2;
 
                     //print deletion
@@ -4576,7 +4571,7 @@ convertMatchesToGlobalAlignment(fragmentStore, scoreType, Nothing());
                     --indelSize;
                     depth += (indelConsens[candidateViewPos].i2 & 255);
                     percentage += (float)((indelConsens[candidateViewPos].i2 >> 8) & 255);
-                    quality += (float)((indelConsens[candidateViewPos].i1 >> 8) & 255);
+                    quality += ((indelConsens[candidateViewPos].i1 >> 8) & 255);
                     appendValue(insertionSeq,(Dna5)(indelConsens[candidateViewPos].i1 & 7));
                     bsi = bsi && (((indelConsens[candidateViewPos].i1 >> 4) & 1) == 1 );
                 }
@@ -4591,7 +4586,7 @@ convertMatchesToGlobalAlignment(fragmentStore, scoreType, Nothing());
                     percentage = percentage/(float)depth; // low coverage positions get a lower weight here
                     depth = (unsigned) round(depth/-indelSize);   // coverage is spread over all positions
                     quality = (unsigned) round(quality/-indelSize);   // quality is spread over all positions
-                    int indelQ = (quality * percentage);
+                    int indelQ = (int)(quality * percentage);
                     if(!bsi) indelQ /= 2;
 
                     //print insertion
