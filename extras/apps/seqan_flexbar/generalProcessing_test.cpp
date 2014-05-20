@@ -3,7 +3,9 @@
 
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include "generalProcessing.h"
 
 using namespace seqan;
@@ -101,8 +103,8 @@ SEQAN_DEFINE_TEST(processN_test)
     appendValue(exspectedNoSub, "ATGACTGTACACGTGATCGTACGTAGCAGC");
 
     processN(seqs2, ids2, allowed, stats);        //No Substitutions
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 1);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 6);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 1u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 6u);
     for (unsigned i = 0; i < length(exspectedNoSub); ++i)
     {
         SEQAN_ASSERT_EQ(exspectedNoSub[i], seqs2[i]);
@@ -122,8 +124,8 @@ SEQAN_DEFINE_TEST(processN_test)
     exspectedSub[3][31] = substitute;
 
     processN(seqs2, ids2, allowed, substitute, stats);
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 1);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 6);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 1u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 6u);
     for (unsigned i = 0; i < length(exspectedSub); ++i)
     {
         SEQAN_ASSERT_EQ(exspectedSub[i], seqs2[i]);
@@ -173,8 +175,8 @@ SEQAN_DEFINE_TEST(processN_paired_test)
     appendValue(exspectedNoSub, "NATGACTGTAGGNGGGATCGTACGTAGCAGGN");
    
     processN(seqs2, ids2, seqsRev2, idsRev2, allowed, stats);        //No Substitutions
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 4);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 10);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 4u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 10u);
     for (unsigned i = 0; i < length(exspectedNoSub); ++i)
     {
         SEQAN_ASSERT_EQ(ids2[i], exspectedIds[i]);
@@ -197,8 +199,8 @@ SEQAN_DEFINE_TEST(processN_paired_test)
     exspectedSub[3][31] = substitute;
 
     processN(seqs2, ids2, seqsRev2, idsRev2, allowed, substitute, stats);
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 4);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 10);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 4u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 10u);
     for (unsigned i = 0; i < length(exspectedSub); ++i)
     {
         SEQAN_ASSERT_EQ(exspectedSub[i], seqs2[i]);
@@ -250,8 +252,8 @@ SEQAN_DEFINE_TEST(processN_multiplex_test)
     appendValue(exspectedNoSub, "ATGACTGTACACGTGATCGTACGTAGCAGC");
 
     processN(seqs2, ids2, multiplex2, allowed, stats);        //No Substitutions
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 1);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 6);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 1u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 6u);
     for (unsigned i = 0; i < length(exspectedNoSub); ++i)
     {
         SEQAN_ASSERT_EQ(exspectedNoSub[i], seqs2[i]);
@@ -273,8 +275,8 @@ SEQAN_DEFINE_TEST(processN_multiplex_test)
     exspectedSub[3][31] = substitute;
 
     processN(seqs2, ids2, multiplex2, allowed, substitute, stats);
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 1);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 6);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 1u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 6u);
     for (unsigned i = 0; i < length(exspectedSub); ++i)
     {
         SEQAN_ASSERT_EQ(exspectedSub[i], seqs2[i]);
@@ -339,8 +341,8 @@ SEQAN_DEFINE_TEST(processN_paired_multiplex_test)
     appendValue(exspectedNoSub, "NATGACTGTAGGNGGGATCGTACGTAGCAGGN");
 
     processN(seqs2, ids2, seqsRev2, idsRev2, multiplex2, allowed, stats);        //No Substitutions
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 4);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 10);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 4u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 10u);
     for (unsigned i = 0; i < length(exspectedNoSub); ++i)
     {
         SEQAN_ASSERT_EQ(exspectedNoSub[i], seqs2[i]);
@@ -365,8 +367,8 @@ SEQAN_DEFINE_TEST(processN_paired_multiplex_test)
     exspectedSub[3][31] = substitute;
 
     processN(seqs2, ids2, seqsRev2, idsRev2, multiplex2, allowed, substitute, stats);
-    SEQAN_ASSERT_EQ(stats.removedSeqs, 4);
-    SEQAN_ASSERT_EQ(stats.uncalledBases, 10);
+    SEQAN_ASSERT_EQ(stats.removedSeqs, 4u);
+    SEQAN_ASSERT_EQ(stats.uncalledBases, 10u);
     for (unsigned i = 0; i < length(exspectedSub); ++i)
     {
         SEQAN_ASSERT_EQ(exspectedSub[i], seqs2[i]);
@@ -405,8 +407,8 @@ SEQAN_DEFINE_TEST(preTrim_test)
     SEQAN_ASSERT_EQ(ids2[1], "Head/Tail");
     SEQAN_ASSERT_EQ(seqs2[2], "TACAGATT");
     SEQAN_ASSERT_EQ(ids2[2], "None");
-    SEQAN_ASSERT_EQ(length(ids2), 3);
-    SEQAN_ASSERT_EQ(length(seqs2), 3);
+    SEQAN_ASSERT_EQ(length(ids2), 3u);
+    SEQAN_ASSERT_EQ(length(seqs2), 3u);
 
     seqs2 = seqs;
     ids2 = ids;
@@ -415,8 +417,8 @@ SEQAN_DEFINE_TEST(preTrim_test)
     SEQAN_ASSERT_EQ(ids2[1], "Head/Tail");
     SEQAN_ASSERT_EQ(seqs2[0], "AGA");
     SEQAN_ASSERT_EQ(ids2[0], "None");
-    SEQAN_ASSERT_EQ(length(ids2), 2);
-    SEQAN_ASSERT_EQ(length(seqs2), 2);
+    SEQAN_ASSERT_EQ(length(ids2), 2u);
+    SEQAN_ASSERT_EQ(length(seqs2), 2u);
 
     seqs2 = seqs;
     ids2 = ids;
@@ -437,8 +439,8 @@ SEQAN_DEFINE_TEST(preTrim_test)
     SEQAN_ASSERT_EQ(ids2[4], "Tail");
     SEQAN_ASSERT_EQ(seqs2[3], "GATTACAGATTACA");
     SEQAN_ASSERT_EQ(ids2[3], "None");
-    SEQAN_ASSERT_EQ(length(seqs2), 5);
-    SEQAN_ASSERT_EQ(length(ids2), 5);
+    SEQAN_ASSERT_EQ(length(seqs2), 5u);
+    SEQAN_ASSERT_EQ(length(ids2), 5u);
 }
 
 SEQAN_DEFINE_TEST(preTrim_paired_test)
@@ -475,8 +477,8 @@ SEQAN_DEFINE_TEST(preTrim_paired_test)
     SEQAN_ASSERT_EQ(ids2[0], "loeschenTrim");
     SEQAN_ASSERT_EQ(seqs2[1], "AAACTT");
     SEQAN_ASSERT_EQ(ids2[1], "Head/Tail");
-    SEQAN_ASSERT_EQ(length(ids2), 2);
-    SEQAN_ASSERT_EQ(length(seqs2), 2);
+    SEQAN_ASSERT_EQ(length(ids2), 2u);
+    SEQAN_ASSERT_EQ(length(seqs2), 2u);
 
     seqs2 = seqs;
     seqsRev2 = seqsRev;
@@ -485,8 +487,8 @@ SEQAN_DEFINE_TEST(preTrim_paired_test)
     preTrim(seqs2, ids2, seqsRev2, idsRev2, 6, 5, 1, stats);
     SEQAN_ASSERT_EQ(seqs2[0], "C");
     SEQAN_ASSERT_EQ(ids2[0], "Head/Tail");
-    SEQAN_ASSERT_EQ(length(ids2), 1);
-    SEQAN_ASSERT_EQ(length(seqs2), 1);
+    SEQAN_ASSERT_EQ(length(ids2), 1u);
+    SEQAN_ASSERT_EQ(length(seqs2), 1u);
 
     seqs2 = seqs;
     seqsRev2 = seqsRev;
@@ -511,8 +513,8 @@ SEQAN_DEFINE_TEST(preTrim_paired_test)
     preTrim(seqs2, ids2, seqsRev2, idsRev2, 0, 0, 6, stats);
     SEQAN_ASSERT_EQ(seqs2[3], "TAAAAAA");
     SEQAN_ASSERT_EQ(ids2[3], "Tail");
-    SEQAN_ASSERT_EQ(length(seqs2), 4);
-    SEQAN_ASSERT_EQ(length(ids2), 4);
+    SEQAN_ASSERT_EQ(length(seqs2), 4u);
+    SEQAN_ASSERT_EQ(length(ids2), 4u);
 }
 
 SEQAN_DEFINE_TEST(trimTo_test)
@@ -537,8 +539,8 @@ SEQAN_DEFINE_TEST(trimTo_test)
     SEQAN_ASSERT_EQ(seqs[1], "1234567");
     SEQAN_ASSERT_EQ(ids[0], "neun");
     SEQAN_ASSERT_EQ(ids[1], "sieben");
-    SEQAN_ASSERT_EQ(length(seqs), 2);
-    SEQAN_ASSERT_EQ(length(ids), 2);
+    SEQAN_ASSERT_EQ(length(seqs), 2u);
+    SEQAN_ASSERT_EQ(length(ids), 2u);
 }
 
 SEQAN_DEFINE_TEST(trimTo_paired_test)
@@ -565,14 +567,17 @@ SEQAN_DEFINE_TEST(trimTo_paired_test)
 
     SEQAN_ASSERT_EQ(seqs[0], "1234567");
     SEQAN_ASSERT_EQ(ids[0], "sieben");
-    SEQAN_ASSERT_EQ(length(seqs), 1);
-    SEQAN_ASSERT_EQ(length(ids), 1);
+    SEQAN_ASSERT_EQ(length(seqs), 1u);
+    SEQAN_ASSERT_EQ(length(ids), 1u);
 }
 
 SEQAN_BEGIN_TESTSUITE(test_my_app_funcs)
 {
+    int tnum = 1;
+#ifdef _OPENMP
 	omp_set_num_threads(8);
-	int tnum = omp_get_max_threads();
+	tnum = omp_get_max_threads();
+#endif
 	std::cout<<"\nRunning Tests using " << tnum << " thread(s).\n\n";
     SEQAN_CALL_TEST(findN_test);
     SEQAN_CALL_TEST(processN_test);

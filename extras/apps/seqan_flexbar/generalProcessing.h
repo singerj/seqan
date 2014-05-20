@@ -35,10 +35,14 @@
 #ifndef SANDBOX_GROUP3_APPS_SEQDPT_GENERALPROCESSING_H_
 #define SANDBOX_GROUP3_APPS_SEQDPT_GENERALPROCESSING_H_
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
-#include <seqan/seq_io.h>
+#include <seqan/parallel.h>
+
+#include <seqan/stream.h>
 
 using namespace seqan;
 
@@ -184,7 +188,7 @@ void processN(TSeqs& seqs, TIds& ids, unsigned allowed, TSub substitute, General
     int limit = length(seqs);
     StringSet<int> res;
     resize(res, limit);
-    #pragma omp parallel for default(shared) schedule(static)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed, substitute);
@@ -195,15 +199,15 @@ void processN(TSeqs& seqs, TIds& ids, unsigned allowed, TSub substitute, General
     {                                   //integer necessary because unsigned would cause error after last iteration
         if (res[i] == -1)                //Placing all sequences/ids which shall be erased at the end of their container
         {
-            #pragma omp parallel default(shared)
+            SEQAN_OMP_PRAGMA(parallel default(shared))
             {
-                #pragma omp sections nowait
+                SEQAN_OMP_PRAGMA(sections nowait)
                 {
-                    #pragma omp section     //distributing the swapping actions
+                    SEQAN_OMP_PRAGMA(section)     //distributing the swapping actions
                     swap(seqs[i], seqs[limit - ex - 1]);
-                    #pragma omp section
+                    SEQAN_OMP_PRAGMA(section)
                     swap(ids[i], ids[limit - ex - 1]);
-                    #pragma omp section
+                    SEQAN_OMP_PRAGMA(section)
                     ++ex;
                 }
             }
@@ -215,15 +219,15 @@ void processN(TSeqs& seqs, TIds& ids, unsigned allowed, TSub substitute, General
     }
     if (ex != 0)
     {
-        #pragma omp parallel default(shared)
+        SEQAN_OMP_PRAGMA(parallel default(shared))
         {
-            #pragma omp sections nowait
+            SEQAN_OMP_PRAGMA(sections nowait)
             {   //Resizing the containers to erase all unwanted sequences/ids at once
-                #pragma omp section
+                SEQAN_OMP_PRAGMA(section)
                 resize(seqs, limit - ex);
-                #pragma omp section
+                SEQAN_OMP_PRAGMA(section)
                 resize(ids, limit - ex);
-                #pragma omp section
+                SEQAN_OMP_PRAGMA(section)
                 stats.removedSeqs += ex;
             }
         }
@@ -237,7 +241,7 @@ void processN(TSeqs& seqs, TIds& ids, unsigned allowed, GeneralStats& stats)
     int limit = length(seqs);
     StringSet<int> res;
     resize(res, limit);
-    #pragma omp parallel for default(shared)schedule(static)
+    SEQAN_OMP_PRAGMA(parallel for default(shared)schedule(static))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed);
@@ -272,7 +276,7 @@ void processN(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, unsigned all
     StringSet<int> res;
     resize(res, limit);
     unsigned uncalled = 0;
-    #pragma omp parallel for default(shared) schedule(static) reduction(+:uncalled)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static) reduction(+:uncalled))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed, substitute);
@@ -317,7 +321,7 @@ void processN(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, unsigned all
     StringSet<int> res;
     resize(res, limit);
     unsigned uncalled = 0;
-    #pragma omp parallel for default(shared)schedule(static) reduction(+:uncalled)
+    SEQAN_OMP_PRAGMA(parallel for default(shared)schedule(static) reduction(+:uncalled))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed);
@@ -362,7 +366,7 @@ void processN(TSeqs& seqs, TIds& ids, TMulti& multiplex, unsigned allowed, TSub 
     StringSet<int> res;
     resize(res, limit);
     unsigned uncalled = 0;
-    #pragma omp parallel for default(shared) schedule(static) reduction(+:uncalled)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static) reduction(+:uncalled))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed, substitute);
@@ -405,7 +409,7 @@ void processN(TSeqs& seqs, TIds& ids, TMulti& multiplex, unsigned allowed, Gener
     StringSet<int> res;
     resize(res, limit);
     unsigned uncalled = 0;
-    #pragma omp parallel for default(shared) schedule(static) reduction(+:uncalled)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static) reduction(+:uncalled))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed);
@@ -449,7 +453,7 @@ void processN(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, TMulti& mult
     StringSet<int> res;
     resize(res, limit);
     unsigned uncalled = 0;
-    #pragma omp parallel for default(shared)schedule(static) reduction(+:uncalled)
+    SEQAN_OMP_PRAGMA(parallel for default(shared)schedule(static) reduction(+:uncalled))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed, substitute);
@@ -501,7 +505,7 @@ void processN(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, TMulti& mult
     StringSet<int> res;
     resize(res, limit);
     unsigned uncalled = 0;
-    #pragma omp parallel for default(shared) schedule(static) reduction(+:uncalled)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static) reduction(+:uncalled))
     for (int i = 0; i < limit; ++i)
     {
         res[i] = findN(seqs[i], allowed);
@@ -583,7 +587,7 @@ void preTrim(TSeqs& seqs, TIds& ids, unsigned head, unsigned tail, unsigned min,
     resize(rem, limit);
     if (head > 0 && tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if (length(seqs[i]) > (head + tail))
@@ -607,7 +611,7 @@ void preTrim(TSeqs& seqs, TIds& ids, unsigned head, unsigned tail, unsigned min,
     }
     else if (head > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
            if (length(seqs[i]) > head)
@@ -630,7 +634,7 @@ void preTrim(TSeqs& seqs, TIds& ids, unsigned head, unsigned tail, unsigned min,
     }
     else if (tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if (length(seqs[i]) > tail)
@@ -653,7 +657,7 @@ void preTrim(TSeqs& seqs, TIds& ids, unsigned head, unsigned tail, unsigned min,
     }
     else
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if (length(seqs[i]) >= min)
@@ -695,7 +699,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TMulti& multiplex, unsigned head, unsigned 
     resize(rem, limit);
     if (head > 0 && tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if (length(seqs[i]) > (head + tail))
@@ -719,7 +723,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TMulti& multiplex, unsigned head, unsigned 
     }
     else if (head > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+       SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
            if (length(seqs[i]) > head)
@@ -742,7 +746,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TMulti& multiplex, unsigned head, unsigned 
     }
     else if (tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if (length(seqs[i]) > tail)
@@ -765,7 +769,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TMulti& multiplex, unsigned head, unsigned 
     }
     else
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if (length(seqs[i]) >= min)
@@ -809,7 +813,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, unsigned head
     resize(rem, limit);
     if (head > 0 && tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) > (head + tail)) && (length(seqsRev[i]) > (head + tail)))
@@ -835,7 +839,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, unsigned head
     }
     else if (head > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) > head) && (length(seqsRev[i]) > head))
@@ -859,7 +863,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, unsigned head
     }
     else if (tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) > tail) && (length(seqsRev[i]) > tail))
@@ -883,7 +887,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, unsigned head
     }
     else
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) >= min) && (length(seqsRev[i]) >= min))
@@ -930,7 +934,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, TMulti& multi
     resize(rem, limit);
     if (head > 0 && tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) > (head + tail)) && (length(seqsRev[i]) > (head + tail)))
@@ -956,7 +960,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, TMulti& multi
     }
     else if (head > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) > head) && (length(seqsRev[i]) > head))
@@ -980,7 +984,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, TMulti& multi
     }
     else if (tail > 0)
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) > tail) && (length(seqsRev[i]) > tail))
@@ -1004,7 +1008,7 @@ void preTrim(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, TMulti& multi
     }
     else
     {
-        #pragma omp parallel for default(shared) private(i) schedule(static)
+        SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
         for (i = 0; i < limit; ++i)
         {
             if ((length(seqs[i]) >= min) && (length(seqsRev[i]) >= min))
@@ -1048,7 +1052,7 @@ void trimTo(TSeqs& seqs, TIds& ids, const unsigned len, GeneralStats& stats)
     StringSet<bool> rem;
     int limit = length(seqs);
     resize(rem, limit);
-    #pragma omp parallel for default(shared) schedule(static)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
     for (int i = 0; i < limit; ++i)
     {
         if (length(seqs[i]) < len)
@@ -1090,7 +1094,7 @@ void trimTo(TSeqs& seqs, TIds& ids, TSeqs& seqsRev, TIds& idsRev, const unsigned
     StringSet<bool> rem;
     int limit = length(seqs);
     resize(rem, limit);
-    #pragma omp parallel for default(shared) private(i) schedule(static)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) private(i) schedule(static))
     for (i = 0; i < limit; ++i)
     {
         if ((length(seqs[i]) < len) || (length(seqsRev[i]) < len))

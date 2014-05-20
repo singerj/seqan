@@ -231,7 +231,7 @@ unsigned _trimReads(TSet & seqSet, TIdSet& idSet, unsigned const cutoff, TSpec c
 	typedef typename seqan::Value<TSet>::Type TSeq;
 	int trimmedReads = 0;
 	int len = length(seqSet);
-	#pragma omp parallel for schedule(static) reduction(+:trimmedReads)
+	SEQAN_OMP_PRAGMA(parallel for schedule(static) reduction(+:trimmedReads))
 	for (int i=0; i < len; ++i)
 	{
 		TSeq& read = value(seqSet, i);
@@ -278,7 +278,7 @@ unsigned dropReads(seqan::StringSet<TId> & idSet, seqan::StringSet<TSeq> & seqSe
 	int len = length(seqSet);
     seqan::StringSet<bool> rem;
     resize(rem, len);
-    #pragma omp parallel for default(shared) schedule(static)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
     for (int i = 0; i < len; ++i)
     {
         if (length(seqSet[i]) < min_length)
@@ -324,7 +324,7 @@ unsigned dropReads(seqan::StringSet<TId> & idSet1, seqan::StringSet<TSeq> & seqS
     resize(rem, len);
     unsigned dropped1 = 0;
     unsigned dropped2 = 0;
-    #pragma omp parallel for default(shared) schedule(static) reduction(+:dropped1, dropped2)
+    SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static) reduction(+:dropped1, dropped2))
     for (int i = 0; i < len; ++i)
     {
         bool drop1 = length(seqSet1[i]) < min_length;

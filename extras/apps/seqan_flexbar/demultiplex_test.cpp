@@ -7,7 +7,9 @@
 #include <seqan/index.h>
 #include <seqan/seq_io.h>
 #include "demultiplex.h"
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 using namespace seqan;
 
@@ -19,7 +21,6 @@ int loadSeqs(char const * path, StringSet<String<char> >& ids, StringSet<String<
 	resize(ids, records);
 	resize(seqs, records);
 	
-
 	if (!isGood(seqStream))
 	{
 		std::cerr << "Error while opening the sequence-file.\n";
@@ -473,8 +474,11 @@ SEQAN_DEFINE_TEST(Input_test)
 	StringSet<String<Dna5Q> > seqs;
 	StringSet<String<char> > bcids;
 	StringSet<String<Dna> > bcs;
-	String<char> seqpath = "D:/seqan/test/seqs.fasta";
-	String<char> bcpath = "D:/seqan/test/barcodes.fasta";
+
+	CharString seqpath = SEQAN_PATH_TO_ROOT();
+    append(seqpath, "/extras/apps/seqan_flexbar/test_data/seqs.fasta");
+	String<char> bcpath = SEQAN_PATH_TO_ROOT();
+    append(bcpath, "/extras/apps/seqan_flexbar/test_data/barcodes.fasta");
 
 	SEQAN_ASSERT_EQ(0, loadSeqs(toCString(seqpath), ids, seqs));
 	SEQAN_ASSERT_EQ(0, loadBarcodes(toCString(bcpath), bcids, bcs));

@@ -382,7 +382,10 @@ template <typename TSeq, typename TId>
 unsigned stripPairBatch(seqan::StringSet<TSeq>& set1, seqan::StringSet<TId>& idSet1,
     seqan::StringSet<TSeq>& set2, seqan::StringSet<TId>& idSet2, AdapterTrimmingStats& stats, bool tagOpt)
 {
-	int t_num = omp_get_max_threads();
+    int t_num = 1;
+#ifdef _OPENMP
+    t_num = omp_get_max_threads();
+#endif
 	// Create local counting variables to avoid concurrency problems.
 	unsigned a1count = 0, a2count = 0, overlapSum = 0;
 	seqan::String<unsigned> minOverlap;
@@ -390,7 +393,7 @@ unsigned stripPairBatch(seqan::StringSet<TSeq>& set1, seqan::StringSet<TId>& idS
 	seqan::resize(minOverlap, t_num, std::numeric_limits<unsigned>::max());
 	seqan::resize(maxOverlap, t_num, 0);
 	int len = length(set1);
-	#pragma omp parallel for schedule(static) reduction(+:a1count, a2count, overlapSum)
+	SEQAN_OMP_PRAGMA(parallel for schedule(static) reduction(+:a1count, a2count, overlapSum))
 	for (int i = 0; i < len; ++i)
 	{
 		// The reads processed in this iteration. The lengths will change after stripPair().
@@ -568,7 +571,7 @@ unsigned stripAdapterBatch(seqan::StringSet<TSeq>& set, seqan::StringSet<TId>& i
 	seqan::resize(minOverlap, t_num, std::numeric_limits<unsigned>::max());
 	seqan::resize(maxOverlap, t_num, 0);
 	int len = length(set);
-	#pragma omp parallel for schedule(static) reduction(+:a_count, overlapSum) 
+	SEQAN_OMP_PRAGMA(parallel for schedule(static) reduction(+:a_count, overlapSum))
 	for (int i=0; i < len; ++i)
 	{
         unsigned over = stripAdapter(value(set, i), adapter, spec);

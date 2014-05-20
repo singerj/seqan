@@ -35,7 +35,9 @@
 #ifndef SANDBOX_GROUP3_APPS_SEQDPT_DEMULTIPLEX_H_
 #define SANDBOX_GROUP3_APPS_SEQDPT_DEMULTIPLEX_H_
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <seqan/find.h>
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
@@ -175,7 +177,7 @@ void getPrefix(TSeqs& prefices, TSeqs& seqs, unsigned len)
 {
 	int limit = length(seqs);
 	resize(prefices, limit);
-	#pragma omp parallel for default(shared) schedule(static)		
+	SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
 	for (int i = 0; i < limit; ++i) //Remark: OMP requires an integer as loop-variable
 	{
 		prefices[i] = prefix(seqs[i], len);
@@ -198,13 +200,13 @@ void buildVariations(StringSet<Dna5String>& variations, const TBarcode& barcode)
 {
 	int limit = (length(barcode))*5;		    //possible number of variations with one error (A,T,G,C,N)
 	resize(variations, limit);				    //resizes according to calculated number of variations
-	#pragma omp parallel for default(shared) schedule(static)
+	SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
 	for (int i = 0; i < limit; ++i)
 	{
         assign(variations[i], barcode);	        //fills resultset with original barcode
 	}
 	limit = limit/5;
-	#pragma omp parallel for default(shared) schedule(static)
+	SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
 	for (int i = 0; i < limit; ++i)
 	{										    //each run through the loop modifies 1 position of the barcode 4 times
 		move(variations[5*i][i], 'A');	    	//multiplication with 5 and addition of 0...4 prevents index conflicts
@@ -294,7 +296,11 @@ template <typename TPrefices, typename TFinder, typename TStats>
 void findAllExactIndex(String<int>& matches, const TPrefices& prefices, const TFinder& finder, TStats& stats)
 {
     resize(matches, length(prefices));
-	int tnum = omp_get_max_threads();
+
+	int tnum = 1;
+#ifdef _OPENMP
+    tnum = omp_get_max_threads();
+#endif
     StringSet<TFinder> finderSet;
     resize(finderSet, tnum);            //creating a set of finders to prevent their continous re-initialisation
     for (int i = 0; i < tnum; ++i)
@@ -302,10 +308,13 @@ void findAllExactIndex(String<int>& matches, const TPrefices& prefices, const TF
         finderSet[i] = finder;
     }
 	int limit = length(prefices);
-	#pragma omp parallel for default(shared) schedule(static)
+	SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
 	for (int i = 0; i < limit; ++i)
 	{
-		int tid = omp_get_thread_num();
+		int tid = 0;
+#ifdef _OPENMP
+        tid = omp_get_thread_num();
+#endif
         int hit = findExactIndex(prefices[i], finderSet[tid]);
 		matches[i] = hit;
 	}
@@ -331,7 +340,7 @@ template <typename TSeqs>
 void clipBarcodes(TSeqs& seqs, const String<int>& matches, unsigned len)
 {
 	int limit = length(matches);
-	#pragma omp parallel for default(shared) schedule(static)
+	SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
 	for (int i = 0; i < limit; ++i)
 		if (matches[i] != -1)					//only erases barcode from sequence if it could be matched
         {
@@ -344,7 +353,7 @@ template <typename TSeqs>
 void clipBarcodes(TSeqs& seqs, int len)
 {
 	int limit = length(seqs);
-	#pragma omp parallel for default(shared) schedule(static)
+	SEQAN_OMP_PRAGMA(parallel for default(shared) schedule(static))
 	for (int i = 0; i < limit; ++i)
     {
 		erase(seqs[i], 0 , len);

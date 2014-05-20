@@ -51,7 +51,9 @@
 // Headers for creating subdirectories.
 #include <errno.h>
 // For setting the number of threads used by OpenMP.
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #include "readTrimming.h"
 #include "adapterTrimming.h"
@@ -478,7 +480,7 @@ public:
 					// Create a new subfolder at basePath/[barcodeID, unidentified].
 					seqan::CharString folderPath(basePath);
 					seqan::append(folderPath, file);
-					int result;
+					int result = 0;
                     #ifdef __linux__
 					    result = mkdir(seqan::toCString(folderPath), 0777);
                     #elif _WIN32
@@ -1602,7 +1604,7 @@ void printStatistics(ProgramParams& programParams, GeneralStats& generalStats, D
 //Defining the the argument parser
 seqan::ArgumentParser initParser(){
 	// PARSER DEFINITON ----------------------------------------
-	seqan::ArgumentParser parser("SeqAn-Flexbar");
+	seqan::ArgumentParser parser("seqan_flexbar");
 	setShortDescription(parser, "The SeqAn NGS-Data Postprocessing Toolkit");
 	addUsageLine(parser, " READ_FILE1 [READ_FILE2] [OPTIONS]");
 	addDescription(parser,
@@ -1613,7 +1615,7 @@ seqan::ArgumentParser initParser(){
 	setDate(parser, __DATE__);
 	setVersion(parser, "1.0.1");
 	seqan::ArgParseArgument fileArg(seqan::ArgParseArgument::INPUTFILE, "FILES", true);
-	setValidValues(fileArg, "fasta fasta.gz fastq fastq.gz");
+	setValidValues(fileArg, ".fasta .fa .fasta.gz .fa.gz .fastq .fq .fastq.gz .fq.gz");
 	addArgument(parser, fileArg);
 
 	// GENERAL OPTIONS -----------------------------------------

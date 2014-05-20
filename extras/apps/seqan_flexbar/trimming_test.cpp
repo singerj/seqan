@@ -7,9 +7,6 @@
 #include <seqan/file.h>
 #include "readTrimming.h"
 
-#define TESTSAMPLE "C:/Users/Sebastian Roskosch/Desktop/daten/testsample.fq"
-
-
 SEQAN_DEFINE_TEST(drop_reads_test)
 {
 	typedef seqan::String<seqan::Dna5Q> TString;
@@ -94,7 +91,9 @@ SEQAN_DEFINE_TEST(drop_reads_test)
 SEQAN_DEFINE_TEST(sliding_window_test)
 {
 	// No error checking, we assume the file exists (it's a constant test file).
-	seqan::SequenceStream inStream(TESTSAMPLE);
+    seqan::CharString buffer = SEQAN_PATH_TO_ROOT();
+    append(buffer, "/extras/apps/seqan_flexbar/test_data/testsample.fq");
+	seqan::SequenceStream inStream(toCString(buffer));
 	seqan::String<char> id;
 	seqan::String<seqan::Dna5Q> seq;
 
@@ -121,7 +120,9 @@ SEQAN_DEFINE_TEST(cut_tail_test)
 	unsigned expected[] = {9, 9, 3, 26, 69, 3, 2, 0, 0, 0, 0, 23, 1, 0, 22, 0, 0, 12, 35, 6,
 					   0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 52, 0};
 
-	seqan::SequenceStream inStream(TESTSAMPLE);
+    seqan::CharString buffer = SEQAN_PATH_TO_ROOT();
+    append(buffer, "/extras/apps/seqan_flexbar/test_data/testsample.fq");
+	seqan::SequenceStream inStream(toCString(buffer));
 	seqan::String<char> id;
 	seqan::String<seqan::Dna5Q> seq;
 
@@ -144,7 +145,9 @@ SEQAN_DEFINE_TEST(cut_bwa_test)
 	unsigned expected[] = {8, 8, 2, 25, 68, 2, 1, 0, 0, 0, 0, 22, 0, 0, 21, 0, 0, 11, 34, 5,
 					   0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 51, 0};
 
-	seqan::SequenceStream inStream(TESTSAMPLE);
+    seqan::CharString buffer = SEQAN_PATH_TO_ROOT();
+    append(buffer, "/extras/apps/seqan_flexbar/test_data/testsample.fq");
+	seqan::SequenceStream inStream(toCString(buffer));
 	seqan::String<char> id;
 	seqan::String<seqan::Dna5Q> seq;
 
@@ -164,8 +167,11 @@ SEQAN_DEFINE_TEST(cut_bwa_test)
 
 SEQAN_BEGIN_TESTSUITE(test_my_app_funcs)
 {
+	int tnum = 1;
+#ifdef _OPENMP
     omp_set_num_threads(8);
-	int tnum = omp_get_max_threads();
+	tnum = omp_get_max_threads();
+#endif
 	std::cout<<"\nRunning Tests using " << tnum << " thread(s).\n\n";
     SEQAN_CALL_TEST(sliding_window_test);
     SEQAN_CALL_TEST(drop_reads_test);

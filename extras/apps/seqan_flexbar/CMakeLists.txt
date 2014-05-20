@@ -15,7 +15,7 @@ message (STATUS "Configuring extras/apps/seqan_flexbar")
 # ----------------------------------------------------------------------------
 
 # Search SeqAn and select dependencies.
-#set (SEQAN_FIND_DEPENDENCIES NONE)
+set (SEQAN_FIND_DEPENDENCIES OpenMP ZLIB BZip2)
 find_package (SeqAn REQUIRED)
 
 # ----------------------------------------------------------------------------
@@ -29,10 +29,21 @@ include_directories (${SEQAN_INCLUDE_DIRS})
 add_definitions (${SEQAN_DEFINITIONS})
 
 # Update the list of file names below if you add source files to your application.
-add_executable (seqan_flexbar seqan_flexbar.cpp)
+add_executable (seqan_flexbar seqan_flexbar.cpp
+                demultiplex.h
+			    readTrimming.h
+			    adapterTrimming.h
+			    generalProcessing.h)
+add_executable(demultiplex_test demultiplex_test.cpp demultiplex.h)
+add_executable(trimming_test trimming_test.cpp readTrimming.h)
+add_executable(adapter_test adapter_test.cpp adapterTrimming.h)
+add_executable(generalProcessing_test generalProcessing_test.cpp generalProcessing.h)
 
 # Add dependencies found by find_package (SeqAn).
-target_link_libraries (seqan_flexbar ${SEQAN_LIBRARIES})
+foreach (EXEC seqan_flexbar trimming_test demultiplex_test
+        adapter_test generalProcessing_test)
+    target_link_libraries (${EXEC} ${SEQAN_LIBRARIES})
+endforeach ()
 
 # Add CXX flags found by find_package (SeqAn).
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SEQAN_CXX_FLAGS}")
@@ -64,6 +75,13 @@ install (FILES LICENSE
 # ----------------------------------------------------------------------------
 
 #seqan_add_app_test (seqan_flexbar)
+
+# ----------------------------------------------------------------------------
+# Setup Common Tool Description for Generic Workflow Nodes
+# ----------------------------------------------------------------------------
+
+# Include executable seqanFlexbar in CTD structure.
+set (SEQAN_CTD_EXECUTABLES ${SEQAN_CTD_EXECUTABLES} seqan_flexbar CACHE INTERNAL "")
 
 # ----------------------------------------------------------------------------
 # CPack Install

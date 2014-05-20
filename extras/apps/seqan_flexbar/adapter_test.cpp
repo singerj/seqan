@@ -187,8 +187,11 @@ SEQAN_DEFINE_TEST(strip_pair_test)
 
 SEQAN_BEGIN_TESTSUITE(test_my_app_funcs)
 {
+    int tnum = 1;
+#ifdef _OPENMP
 	omp_set_num_threads(8);
-	int tnum = omp_get_max_threads();
+	tnum = omp_get_max_threads();
+#endif
 	std::cout<<"\nRunning Tests using " << tnum << " thread(s).\n\n";
     SEQAN_CALL_TEST(get_overlap_test);
 	SEQAN_CALL_TEST(count_gap_test);
