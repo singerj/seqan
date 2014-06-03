@@ -1614,9 +1614,11 @@ seqan::ArgumentParser initParser(){
         "command line parameters and can operate on both single- and paired-end read data.");
 	setDate(parser, __DATE__);
 	setVersion(parser, "1.0.1");
-	seqan::ArgParseArgument fileArg(seqan::ArgParseArgument::INPUTFILE, "FILES", true);
+
+	seqan::ArgParseArgument fileArg(seqan::ArgParseArgument::INPUTFILE, "READS", true);
 	setValidValues(fileArg, ".fasta .fa .fasta.gz .fa.gz .fastq .fq .fastq.gz .fq.gz");
 	addArgument(parser, fileArg);
+	setHelpText(parser, 0, "Either one (single-end) or two (paired-end) read files.");
 
 	// GENERAL OPTIONS -----------------------------------------
 	addSection(parser, "General Options");
@@ -1645,8 +1647,8 @@ seqan::ArgumentParser initParser(){
 
 	seqan::ArgParseOption outputOpt = seqan::ArgParseOption(
 		"out", "output", "Folder for output (must already exist).",
-		seqan::ArgParseOption::OUTPUTFILE, "OUTPUT");
-	setDefaultValue(outputOpt, "");
+		seqan::ArgParseOption::OUTPUTPREFIX, "OUTPUT");
+	setValidValues(outputOpt, ".fasta .fa .fasta.gz .fa.gz .fastq .fq .fastq.gz .fq.gz .txt .csv");
 	addOption(parser, outputOpt);
 
     seqan::ArgParseOption adTagOpt = seqan::ArgParseOption(
