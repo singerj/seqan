@@ -31,8 +31,11 @@
 //
 // ==========================================================================
 
+//SEQAN_NO_GENERATED_FORWARDS: no forwards are generated for this file
+
 #ifndef PLATFORM_GCC
-#define PLATFORM_GCC
+  #define PLATFORM_GCC
+#endif
 
 // should be set before including anything
 #ifndef _FILE_OFFSET_BITS
@@ -85,5 +88,3 @@ typedef uint8_t __uint8;   // nolint
 #    define SEQAN_CXX11_STANDARD
 #  endif
 #endif
-
-#endif  // #ifndef PLATFORM_GCC

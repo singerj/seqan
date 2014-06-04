@@ -57,7 +57,7 @@ public:
     TFinder finder;
 
     IndexFinderTest() :
-        finder(TBase::index)
+        finder(this->index)
     {}
 };
 

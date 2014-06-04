@@ -685,14 +685,13 @@ public:
 
     // Simulate next chunk.
     void run(seqan::Dna5String /*const*/ & seq,
-             std::vector<std::pair<int, int> > const & gapIntervals,
              PositionMap const & posMap,
              seqan::CharString const & refName,
              seqan::Dna5String /*const*/ & refSeq,
              int rID, int hID)
     {
         // Sample fragments.
-        fragSampler->generateMany(fragments, rID, length(seq), gapIntervals, fragmentIds.size());
+        fragSampler->generateMany(fragments, rID, length(seq), fragmentIds.size());
 
         // Simulate reads.
         int seqCount = (options->seqOptions.simulateMatePairs ? 2 : 1) * fragmentIds.size();
@@ -799,37 +798,6 @@ public:
         return 0;
     }
 
-    // Build sorted vector of intervals with more than minNs N characters.
-    //
-    // Used for fragment exclusion downstream.
-    void buildGapIntervals(std::vector<std::pair<int, int> > & intervals,
-                           seqan::Dna5String const & contigSeq,
-                           unsigned minNs = 3)
-    {
-        intervals.clear();
-
-        bool inN = false;
-        unsigned beginPos = 0;
-        for (unsigned pos = 0; pos < length(contigSeq); ++pos)
-        {
-            if (contigSeq[pos] == 'N' && !inN)
-            {
-                beginPos = pos;
-                inN = true;
-            }
-            else if (contigSeq[pos] != 'N' && inN)
-            {
-                if (pos - beginPos >= minNs)
-                    intervals.push_back(std::make_pair(beginPos, pos));
-                inN = false;
-            }
-        }
-        if (inN)
-            intervals.push_back(std::make_pair(beginPos, length(contigSeq)));
-
-        std::sort(intervals.begin(), intervals.end());
-    }
-
     void _simulateReadsDoSimulation()
     {
         std::cerr << "\nSimulating Reads:\n";
@@ -841,11 +809,8 @@ public:
         // Note that all shared variables are correctly synchronized by implicit flushes at the critical sections below.
         MethylationLevels levels;
         seqan::Dna5String refSeq;  // reference sequence
-        std::vector<std::pair<int, int> > breakpoints;  // unused/ignored
-        while ((options.seqOptions.bsSeqOptions.bsSimEnabled &&
-                vcfMat.materializeNext(contigSeq, levels, breakpoints, rID, hID)) ||
-               (!options.seqOptions.bsSeqOptions.bsSimEnabled &&
-                vcfMat.materializeNext(contigSeq, breakpoints, rID, hID)))
+        while ((options.seqOptions.bsSeqOptions.bsSimEnabled && vcfMat.materializeNext(contigSeq, levels, rID, hID)) ||
+               (!options.seqOptions.bsSeqOptions.bsSimEnabled && vcfMat.materializeNext(contigSeq, rID, hID)))
         {
             std::cerr << "  " << sequenceName(vcfMat.faiIndex, rID) << " (allele " << (hID + 1) << ") ";
             contigFragmentCount = 0;
@@ -870,14 +835,10 @@ public:
                     threads[tID].fragmentIds.resize(numRead);
                 }
 
-                // Build gap intervals.
-                std::vector<std::pair<int, int> > gapIntervals;
-                buildGapIntervals(gapIntervals, contigSeq);
-
                 // Perform the simulation.
                 SEQAN_OMP_PRAGMA(parallel num_threads(options.numThreads))
                 {
-                    threads[omp_get_thread_num()].run(contigSeq, gapIntervals, vcfMat.posMap,
+                    threads[omp_get_thread_num()].run(contigSeq, vcfMat.posMap,
                                                       sequenceName(vcfMat.faiIndex, rID),
                                                       refSeq, rID, hID);
                 }

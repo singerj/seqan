@@ -48,18 +48,18 @@ using namespace seqan;
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// Function testFinder()                                             [FinderTester]
+// Function onFind()                                             [FinderTester]
 // ----------------------------------------------------------------------------
 
 template <typename TText, typename TPattern, typename TSpec, typename TFinderSpec>
 inline void
-testFinder(FinderTester<TText, TPattern, TSpec> & tester, Finder2<TText, TPattern, TFinderSpec> const & finder)
+onFind(FinderTester<TText, TPattern, TSpec> & tester, Finder2<TText, TPattern, TFinderSpec> const & finder)
 {
     typedef typename Fibre<TText, FibreSA>::Type const                          TTextSAFibre;
     typedef typename Infix<TTextSAFibre>::Type                                  TTextOccurrences;
     typedef typename Size<TText>::Type                                          TTextSize;
 
-    TTextOccurrences textOccurrences = getOccurrences(textIterator(finder));
+    TTextOccurrences textOccurrences = getOccurrences(back(finder.textStack));
 
     TTextSize textOccurrencesCount = length(textOccurrences);
 
@@ -76,8 +76,8 @@ testFinder(FinderTester<TText, TPattern, TSpec> & tester, Finder2<TText, TPatter
 
 template <typename TText, typename TPattern, typename TPatternIndexSpec, typename TSpec, typename TFinderSpec>
 inline void
-testFinder(FinderTester<TText, Index<TPattern, TPatternIndexSpec>, TSpec> & tester,
-           Finder2<TText, Index<TPattern, TPatternIndexSpec>, TFinderSpec> const & finder)
+onFind(FinderTester<TText, Index<TPattern, TPatternIndexSpec>, TSpec> & tester,
+       Finder2<TText, Index<TPattern, TPatternIndexSpec>, TFinderSpec> const & finder)
 {
     typedef Index<TPattern, TPatternIndexSpec>                                  TPatternIndex;
     typedef typename Fibre<TText, FibreSA>::Type const                          TTextSAFibre;
@@ -87,8 +87,8 @@ testFinder(FinderTester<TText, Index<TPattern, TPatternIndexSpec>, TSpec> & test
     typedef typename Size<TText>::Type                                          TTextSize;
     typedef typename Size<TPatternIndex>::Type                                  TPatternSize;
 
-    TTextOccurrences textOccurrences = getOccurrences(textIterator(finder));
-    TPatternOccurrences patternOccurrences = getEmptyEdges(patternIterator(finder));
+    TTextOccurrences textOccurrences = getOccurrences(back(finder.textStack));
+    TPatternOccurrences patternOccurrences = getEmptyEdges(back(finder.patternStack));
 
     TTextSize textOccurrencesCount = length(textOccurrences);
     TPatternSize patternOccurrencesCount = length(patternOccurrences);
@@ -150,7 +150,7 @@ SEQAN_DEFINE_TEST(test_find_backtracking_multiple_edit_banana_vs_ada_ana)
     TTextIndex textIndex(text);
 
     TPatternIndex patternIndex(pattern);
-    indexCreate(patternIndex, FibreSA(), Trie());
+    buildTrie(patternIndex, pattern);
 
     TTester tester;
     TFinder finder;
@@ -197,7 +197,7 @@ SEQAN_DEFINE_TEST(test_find_backtracking_multiple_hamming_banana_vs_ada_ana)
     TTextIndex textIndex(text);
 
     TPatternIndex patternIndex(pattern);
-    indexCreate(patternIndex, FibreSA(), Trie());
+    buildTrie(patternIndex, pattern);
 
     TTester tester;
     TFinder finder;

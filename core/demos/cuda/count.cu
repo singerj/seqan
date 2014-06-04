@@ -38,31 +38,25 @@
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
 #include <seqan/index.h>
-#include <seqan/index/index_fm_device.h>
 
 using namespace seqan;
 
 // ==========================================================================
-// Metafunctions
+// Classes
 // ==========================================================================
 
-namespace seqan {
+// --------------------------------------------------------------------------
+// Class CUDAFMIndexConfig
+// --------------------------------------------------------------------------
+// Select the traits for the FM-index.
 
-// Manually specialize word size to be compatible with GPU
+struct CUDAFMIndexConfig
+{
+    typedef TwoLevels<void>      TValuesSpec;
+    typedef Naive<void>          TSentinelsSpec;
 
-template <typename TValue>
-struct RankDictionaryWordSize_<TValue, TwoLevels<void> > :
-    BitsPerValue<__uint32> {};
-
-template <typename TValue>
-struct RankDictionaryWordSize_<TValue, TwoLevels<Device<void> > > :
-    BitsPerValue<__uint32> {};
-
-template <typename TValue, typename TSpec>
-struct RankDictionaryWordSize_<TValue, TwoLevels<View<TSpec> > > :
-    BitsPerValue<__uint32> {};
-
-}
+    static const unsigned SAMPLING = 8;
+};
 
 // ==========================================================================
 // Functions
@@ -87,7 +81,7 @@ int main(int argc, char const ** argv)
         std::cerr << "USAGE: " << argv[0] << " <TEXT> <PATTERN> [<PATTERN> ...]" << std::endl;
         return 1;
     }
-
+    
     // Create a haystack.
     THaystack haystack = argv[1];
 
@@ -101,7 +95,7 @@ int main(int argc, char const ** argv)
     // ----------------------------------------------------------------------
 
     // Select the index type.
-    typedef Index<THaystack, FMIndex<void, CudaFMIndexConfig> > TIndex;
+    typedef Index<THaystack, FMIndex<void, CUDAFMIndexConfig> > TIndex;
 
     // Build the index over the reversed haystack.
     TIndex index(haystack);

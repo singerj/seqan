@@ -23,11 +23,6 @@ if (NOT ZLIB_FOUND)
   return ()
 endif (NOT ZLIB_FOUND)
 
-# Mason2 does not work correctly with Visual Studio Version <10 on 64 bit systems.
-if (MSVC AND MSVC_VERSION LESS 1600)
-  message (STATUS "  Visual Studio Version <10: MASON2 will not be built.")
-endif (MSVC AND MSVC_VERSION LESS 1600)
-
 # Enable C++11 in GCC and/or CLANG.
 #if (CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
 #    add_definitions ("-std=c++0x")
@@ -177,3 +172,4 @@ if (SEQAN_BUILD_SYSTEM STREQUAL "APP:mason2")
 
   seqan_configure_cpack_app (mason2 "mason2")
 endif (SEQAN_BUILD_SYSTEM STREQUAL "APP:mason2")
+

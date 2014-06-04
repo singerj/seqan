@@ -40,15 +40,9 @@
 #define SEQAN_MISC_MISC_BIT_TWIDDLING_H_
 
 #ifdef PLATFORM_WINDOWS_VS
-
 // Make intrinsics visible.  It appears that this is not necessary with VS 10
 // any more, for VS 9, it must be included.
 #include <intrin.h>
-
-#ifdef __SSE4_2__
-#include <nmmintrin.h>
-#endif
-
 #endif  // #ifdef PLATFORM_WINDOWS_VS
 
 // TODO(holtgrew): Test this!
@@ -98,13 +92,9 @@ static const int DeBruijnMultiplyLookup[32] =
   26, 12, 18,  6, 11,  5, 10, 9
 };
 
-// ----------------------------------------------------------------------------
-// Tag WordSize_
-// ----------------------------------------------------------------------------
-// This parametrized tag is used for selecting a _popCountImpl() implementation.
-
-template <unsigned int NUM_BITS>
-struct WordSize_ {};
+// ============================================================================
+// Metafunctions
+// ============================================================================
 
 // ============================================================================
 // Functions
@@ -319,7 +309,6 @@ hiBits(TWord word, TPos index)
 // ----------------------------------------------------------------------------
 // Function popCount()
 // ----------------------------------------------------------------------------
-// The compiler-dependent implementations of _popCountImpl() follow.
 
 /*!
  * @fn popCount
@@ -344,14 +333,6 @@ hiBits(TWord word, TPos index)
 ..include:seqan/misc/misc_bit_twiddling.h
  */
 
-template <typename TWord>
-SEQAN_HOST_DEVICE
-inline unsigned
-popCount(TWord word)
-{
-    return _popCountImpl(word, WordSize_<BitsPerValue<TWord>::VALUE>());
-}
-
 // Implementing this platform-independent is tricky.  There are two points to platform independentness. First, the
 // choice of compiler and second the used CPU.  Currently, we do not perform any checks for the CPU and assume that
 // the Intel intrinsic POPCNT is available.  The function is implemented to work on the supported compilers GCC/MINGW,
@@ -366,9 +347,6 @@ popCount(TWord word)
 // _popCountImpl() that are given the length of the word as a template argument.  If necessary, we copy the word in a
 // variable of next largest size and call the best suited builtin on this copy.
 
-// ----------------------------------------------------------------------------
-// Function _popCountImplGeneric()
-// ----------------------------------------------------------------------------
 // Generic implementation of counting bits.  Taken from http://graphics.stanford.edu/~seander/bithacks.html
 //
 // Brian Kernighan's method goes through as many iterations as there are set bits. So if we have a 32-bit word with
@@ -390,40 +368,37 @@ _popCountImplGeneric(TWord word)  // Note that word is copied!
 	return c;
 }
 
-// ----------------------------------------------------------------------------
-// Function _popCountImpl()
-// ----------------------------------------------------------------------------
-// CUDA implementations.
+// This parametrized tag is used for selecting a _popCountImpl() implementation.
+
+template <unsigned int NUM_BITS>
+struct WordSize_ {};
+
+// The compiler-dependent implementations of _popCountImpl() follow.
 
 #if defined(__CUDA_ARCH__)
 
 template <typename TWord>
-SEQAN_DEVICE
-inline unsigned _popCountImpl(TWord word, WordSize_<32> const & /*tag*/)
+inline SEQAN_DEVICE
+unsigned _popCountImpl(TWord const & word, WordSize_<32> const & /*tag*/)
 {
     return __popc(static_cast<__uint32>(word));
 }
 
 template <typename TWord>
-SEQAN_DEVICE
-inline unsigned _popCountImpl(TWord word, WordSize_<16> const & /*tag*/)
+inline SEQAN_DEVICE
+unsigned _popCountImpl(TWord word, WordSize_<16> const & /*tag*/)
 {
     return __popc(static_cast<__uint32>(word));
 }
 
 template <typename TWord>
-SEQAN_DEVICE
-inline unsigned _popCountImpl(TWord word, WordSize_<8> const & /*tag*/)
+inline SEQAN_DEVICE
+unsigned _popCountImpl(TWord word, WordSize_<8> const & /*tag*/)
 {
     return __popc(static_cast<__uint32>(word));
 }
 
 #else   // #if defined(__CUDA_ARCH__)
-
-// ----------------------------------------------------------------------------
-// Function _popCountImpl()
-// ----------------------------------------------------------------------------
-// MSVC implementations.
 
 #if defined(_MSC_VER) && (_MSC_VER <= 1400)  // MSVC <= 2005, no intrinsic.
 
@@ -438,60 +413,36 @@ _popCountImpl(TWord word, WordSize_<NUM_BITS> const & /*tag*/)
 
 #if defined(_MSC_VER) && (_MSC_VER > 1400)  // MSVC >= 2008, has intrinsic
 
-#if defined(__SSE4_2__)
-
-template <typename TWord>
-inline unsigned
-_popCountImpl(TWord word, WordSize_<64> const & /*tag*/)
-{
-    // 64-bit Windows, 64 bit intrinsic available
-    return __popcnt64(static_cast<__uint64>(word));
-}
-
-template <typename TWord>
-inline unsigned
-_popCountImpl(TWord word, WordSize_<32> const & /*tag*/)
-{
-    return __popcnt(static_cast<__uint32>(word));
-}
-
-#else // #if defined(__SSE4_2__)
-
-template <typename TWord>
-inline unsigned
-_popCountImpl(TWord word, WordSize_<64> const & /*tag*/)
-{
 #if defined(_WIN64)
 
-#if defined(__SSE4_2__)
-    // 64-bit Windows, SSE4.2 bit intrinsic available
-    return _mm_popcnt_u64(static_cast<__uint64>(word));
-#else
-    // 64-bit Windows, 64 bit intrinsic available
+// 64-bit Windows, 64 bit intrinsic available
+
+template <typename TWord>
+inline unsigned
+_popCountImpl(TWord word, WordSize_<64> const & /*tag*/)
+{
     return __popcnt64(static_cast<__uint64>(word));
-#endif
-
-#else // #if defined(_WIN64)
-
-    // 32-bit Windows, 64 bit intrinsic not available
-	return __popcnt(static_cast<__uint32>(word)) + __popcnt(static_cast<__uint32>(word >> 32));
-
-#endif // #if defined(_WIN64)
 }
+
+#else  // #if defined(_WIN64)
+
+// 32-bit Windows, 64 bit intrinsic not available
+
+template <typename TWord>
+inline unsigned
+_popCountImpl(TWord word, WordSize_<64> const & /*tag*/)
+{
+	return __popcnt(static_cast<__uint32>(word)) + __popcnt(static_cast<__uint32>(word >> 32));
+}
+
+#endif  // #if defined(_WIN64)
 
 template <typename TWord>
 inline unsigned
 _popCountImpl(TWord word, WordSize_<32> const & /*tag*/)
 {
-#if defined(__SSE4_2__)
-    // SSE4.2 bit intrinsic available
-    return _mm_popcnt_u32(static_cast<__uint32>(word));
-#else
     return __popcnt(static_cast<__uint32>(word));
-#endif
 }
-
-#endif // #if defined(__SSE4_2__)
 
 template <typename TWord>
 inline unsigned
@@ -508,12 +459,6 @@ _popCountImpl(TWord word, WordSize_<8> const & /*tag*/)
 }
 
 #endif  // #if defined(_MSC_VER) && (_MSC_VER <= 1400)
-
-// ----------------------------------------------------------------------------
-// Function _popCountImpl()
-// ----------------------------------------------------------------------------
-// GCC or CLANG implementations.
-// SSE4.2 popcnt is emitted when compiling with -mpopcnt or -march=corei7
 
 #if !defined(_MSC_VER)  // GCC or CLANG
 
@@ -548,6 +493,13 @@ _popCountImpl(TWord word, WordSize_<8> const & /*tag*/)
 #endif    // GCC or CLANG
 
 #endif    // #if !defined(__CUDA_ARCH__)
+
+template <typename TWord>
+SEQAN_HOST_DEVICE inline unsigned
+popCount(TWord word)
+{
+    return _popCountImpl(word, WordSize_<BitsPerValue<TWord>::VALUE>());
+}
 
 // ----------------------------------------------------------------------------
 // Function printBits()
@@ -691,7 +643,7 @@ _bitScanForward(TWord word, WordSize_<NUM_BITS>)
     return _bitScanForwardGeneric(word, WordSize_<NUM_BITS>());
 }
 
-#if defined(PLATFORM_GCC) || defined(PLATFORM_WINDOWS_MINGW)
+#ifdef PLATFORM_GCC
 
 template <typename TWord>
 inline TWord
@@ -792,8 +744,8 @@ _bitScanForward(TWord word, WordSize_<32>)
     _BitScanForward(&index, static_cast<unsigned long>(word));
     return index;
 }
-#endif  // #if defined(PLATFORM_GCC) || defined(PLATFORM_WINDOWS_MINGW)
-#endif  // #ifdef PLATFORM_GCC
+#endif  // ifdef PLATFORM_WINDOWS
+#endif  // ifdef PLATFORM_GCC
 
 // ----------------------------------------------------------------------------
 // Function bitScanReverse()

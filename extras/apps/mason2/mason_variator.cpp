@@ -192,35 +192,6 @@ void print(std::ostream & out, MasonVariatorOptions const & options)
 }
 
 // --------------------------------------------------------------------------
-// Function isNearN()
-// --------------------------------------------------------------------------
-
-// Returns true if the position is next to an N.
-bool isNearN(seqan::CharString const & seq, unsigned pos)
-{
-    if (pos == 0u || pos + 1u >= length(seq))
-        return true;  // too close to end
-    if (seq[pos - 1] == 'N' || seq[pos] == 'N' || seq[pos + 1] == 'N')
-        return true;
-    return false;
-}
-
-// --------------------------------------------------------------------------
-// Function overlapsWithN()
-// --------------------------------------------------------------------------
-
-// Returns true if the interval [beginPos, endPos) overlaps with an N or is next to one.
-bool overlapsWithN(seqan::CharString const & seq, unsigned beginPos, unsigned endPos)
-{
-    if (endPos + 1 >= length(seq) || beginPos == 0u)
-        return true;  // too close to end
-    for (unsigned i = beginPos - 1; i < endPos + 1; ++i)
-        if (seq[i] == 'N')
-            return true;  // overlaps with an N
-    return false;
-}
-
-// --------------------------------------------------------------------------
 // Class StructuralVariantSimulator
 // --------------------------------------------------------------------------
 
@@ -332,25 +303,25 @@ public:
                     case VariationSizeRecord::INDEL:
                         if (empty(record.seq))
                         {
-                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size, seq))
+                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size))
                                 continue;
                         }
                         else
                         {
-                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size, record.seq, seq))
+                            if (!simulateSVIndel(variants, haploCount, rId, pos, record.size, record.seq))
                                 continue;
                         }
                         break;
                     case VariationSizeRecord::INVERSION:
-                        if (!simulateInversion(variants, haploCount, rId, pos, record.size, seq))
+                        if (!simulateInversion(variants, haploCount, rId, pos, record.size))
                             continue;
                         break;
                     case VariationSizeRecord::TRANSLOCATION:
-                        if (!simulateTranslocation(variants, haploCount, rId, pos, record.size, seq))
+                        if (!simulateTranslocation(variants, haploCount, rId, pos, record.size))
                             continue;
                         break;
                     case VariationSizeRecord::DUPLICATION:
-                        if (!simulateDuplication(variants, haploCount, rId, pos, record.size, seq))
+                        if (!simulateDuplication(variants, haploCount, rId, pos, record.size))
                             continue;
                         break;
                     default:
@@ -435,26 +406,26 @@ public:
             {
                 if (pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, 1)))
                     size = -size;
-                if (!simulateSVIndel(variants, haploCount, rId, pos, size, seq))
+                if (!simulateSVIndel(variants, haploCount, rId, pos, size))
                     continue;
                 if (back(variants.svRecords).size < 0)
                     pos += -back(variants.svRecords).size + 1;
             }
             else if (isInversion)
             {
-                if (!simulateInversion(variants, haploCount, rId, pos, size, seq))
+                if (!simulateInversion(variants, haploCount, rId, pos, size))
                     continue;
                 pos += back(variants.svRecords).size + 1;
             }
             else if (isTranslocation)
             {
-                if (!simulateTranslocation(variants, haploCount, rId, pos, size, seq))
+                if (!simulateTranslocation(variants, haploCount, rId, pos, size))
                     continue;
                 pos = back(variants.svRecords).targetPos + 1;
             }
             else if (isDuplication)
             {
-                if (!simulateDuplication(variants, haploCount, rId, pos, size, seq))
+                if (!simulateDuplication(variants, haploCount, rId, pos, size))
                     continue;
                 pos = back(variants.svRecords).targetPos + 1;
             }
@@ -468,16 +439,15 @@ public:
         }
     }
 
-    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size,
-                         seqan::CharString const & /*seq*/, seqan::CharString const & indelSeq)
+    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size, seqan::CharString const & seq)
     {
         if (options.verbosity >= 2)
-            std::cerr << "Simulating SV INDEL indelSeq = " << indelSeq << '\n';
+            std::cerr << "Simulating SV INDEL seq = " << seq << '\n';
 
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
         appendValue(variants.svRecords, StructuralVariantRecord(
                 StructuralVariantRecord::INDEL, hId, rId, pos, size));
-        back(variants.svRecords).seq = indelSeq;
+        back(variants.svRecords).seq = seq;
         if (options.genVarIDs)
         {
             // Add name.
@@ -489,8 +459,7 @@ public:
         return true;
     }
 
-    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size,
-                         seqan::CharString const & seq)
+    bool simulateSVIndel(Variants & variants, int haploCount, int rId, unsigned pos, int size)
     {
         // Indels are simulated for one haplotype only.
         if (options.verbosity >= 2)
@@ -500,24 +469,17 @@ public:
         bool deletion = (size < 0);
         if (deletion && (pos - size) > sequenceLength(faiIndex, rId))
             return false;  // not enough space at the end
-        else if (deletion && overlapsWithN(seq, pos, pos - size))
-            return false;  // do not allow deletion to overlap with gap
-        else if (!deletion && isNearN(seq, pos))
-            return false;  // do not allow insertion into gap
         seqan::Pdf<seqan::Uniform<int> > pdf(0, 3);
         for (int i = 0; i < size; ++i)  // not executed in case of deleted sequence
             appendValue(indelSeq, seqan::Dna5(pickRandomNumber(rng, pdf)));
 
-        return simulateSVIndel(variants, haploCount, rId, pos, size, seq, indelSeq);
+        return simulateSVIndel(variants, haploCount, rId, pos, size, indelSeq);
     }
 
-    bool simulateInversion(Variants & variants, int haploCount, int rId, unsigned pos, int size,
-                           seqan::CharString const & seq)
+    bool simulateInversion(Variants & variants, int haploCount, int rId, unsigned pos, int size)
     {
         if (pos + size >= sequenceLength(faiIndex, rId))
             return false;
-        if (overlapsWithN(seq, pos, pos + size))
-            return false;  // do not allow segment to overlap with stretch
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
         appendValue(variants.svRecords, StructuralVariantRecord(
                 StructuralVariantRecord::INVERSION, hId, rId, pos, size));
@@ -532,16 +494,13 @@ public:
         return true;
     }
 
-    bool simulateTranslocation(Variants & variants, int haploCount, int rId, unsigned pos, int size,
-                               seqan::CharString const & seq)
+    bool simulateTranslocation(Variants & variants, int haploCount, int rId, unsigned pos, int size)
     {
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
         int tPos = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(pos + size + options.minSVSize,
                                                                           pos + size + options.maxSVSize));
         if (tPos >= (int)sequenceLength(faiIndex, rId))
             return false;
-        if (overlapsWithN(seq, pos, pos + size) || isNearN(seq, tPos))
-            return false;  // do not allow segment to overlap with strecht of Ns and target to be next to an N
         appendValue(variants.svRecords, StructuralVariantRecord(
                 StructuralVariantRecord::TRANSLOCATION, hId, rId, pos, size, rId, tPos));
         if (options.genVarIDs)
@@ -555,10 +514,9 @@ public:
         return true;
     }
 
-    bool simulateDuplication(Variants & variants, int haploCount, int rId, unsigned pos, int size,
-                             seqan::CharString const & seq)
+    bool simulateDuplication(Variants & variants, int haploCount, int rId, unsigned pos, int size)
     {
-        if (!simulateTranslocation(variants, haploCount, rId, pos, size, seq))
+        if (!simulateTranslocation(variants, haploCount, rId, pos, size))
             return false;
         back(variants.svRecords).kind = StructuralVariantRecord::DUPLICATION;
         if (options.genVarIDs)
@@ -625,7 +583,7 @@ public:
         {
             // Seek next possible SV record that could have pos close to its breakends.
             bool skip = false;  // marker in case we switch SV records
-            while ((int)pos >= svRecord.endPosition())
+            while ((int)pos > svRecord.endPosition())
             {
                 // Skip if near breakend.
                 skip = svRecord.nearBreakend(pos);
@@ -687,7 +645,7 @@ public:
             }
             else if (isIndel)
             {
-                if (!simulateSmallIndel(variants, seq, haploCount, rId, pos))
+                if (!simulateSmallIndel(variants, haploCount, rId, pos))
                     continue;
                 if (back(variants.smallIndels).size < 0)
                     pos += -back(variants.smallIndels).size + 1;
@@ -706,9 +664,6 @@ public:
     // Return true if SNP could be simulated.
     bool simulateSnp(Variants & variants, seqan::CharString & seq, int haploCount, int rId, unsigned pos)
     {
-        if (isNearN(seq, pos))
-            return false;  // No SNP next to an N.
-        
         // We simulate an alternative base for each haplotype.
 
         seqan::Dna5 from = seq[pos];
@@ -727,7 +682,7 @@ public:
     }
 
     // Return true if SNP could be simulated.
-    bool simulateSmallIndel(Variants & variants, seqan::CharString & seq, int haploCount, int rId, unsigned pos)
+    bool simulateSmallIndel(Variants & variants, int haploCount, int rId, unsigned pos)
     {
         // Indels are simulated for one haplotype only.
         int hId = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, haploCount - 1));
@@ -738,10 +693,6 @@ public:
         bool deletion = pickRandomNumber(rng, seqan::Pdf<seqan::Uniform<int> >(0, 1));
         if (deletion && (pos + indelSize) > sequenceLength(faiIndex, rId))
             return false;  // not enough space at the end
-        if (deletion && overlapsWithN(seq, pos, pos + indelSize))
-            return false;  // no deletion in gap
-        else if (!deletion && isNearN(seq, pos))
-            return false;  // no insertion next to N
         indelSize = deletion ? -indelSize : indelSize;
         seqan::Pdf<seqan::Uniform<int> > pdf(0, 3);
         for (int i = 0; i < indelSize; ++i)  // not executed in case of deleted sequence

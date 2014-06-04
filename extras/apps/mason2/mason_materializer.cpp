@@ -40,8 +40,6 @@
 
 // Note: We treat all given variants as phased.
 
-#include <fstream>
-
 #include <seqan/arg_parse.h>
 #include <seqan/basic.h>
 #include <seqan/seq_io.h>
@@ -74,8 +72,6 @@ public:
 
     // Output sequence stream.
     seqan::SequenceStream outStream;
-    // Output breakpoints file.
-    std::fstream breakpointsOut;
     // Input and output for methylation.
     seqan::FaiIndex methFaiIndex;
     seqan::SequenceStream outMethLevelStream;
@@ -104,15 +100,6 @@ public:
             if (!isGood(outStream))
                 throw MasonIOException("Could not open output file.");
 
-            // Open output breakpoints TSV file.
-            if (!empty(options.outputBreakpointFile))
-            {
-                breakpointsOut.open(toCString(options.outputBreakpointFile), std::ios::binary | std::ios::out);
-                if (!breakpointsOut.good())
-                    throw MasonIOException("Could not open breakpoints output file.");
-                breakpointsOut << "#ref\tid\tpos\n";
-            }
-
             if (options.methOptions.simulateMethylationLevels)
             {
                 open(outMethLevelStream, toCString(options.methFastaOutFile), seqan::SequenceStream::WRITE);
@@ -136,9 +123,8 @@ public:
         seqan::Dna5String seq;
         std::cerr << "Materializing...";
         MethylationLevels levels;
-        std::vector<std::pair<int, int> > breakpoints;
         if (options.methOptions.simulateMethylationLevels)  // methylation level simulation
-            while (vcfMat.materializeNext(seq, levels, breakpoints, rID, hID))
+            while (vcfMat.materializeNext(seq, levels, rID, hID))
             {
                 std::stringstream ssName;
                 ssName << vcfMat.vcfStream.header.sequenceNames[rID] << options.haplotypeNameSep << (hID + 1);
@@ -149,11 +135,6 @@ public:
                     std::cerr << "ERROR: Could not write materialized sequence to output.\n";
                     return 1;
                 }
-
-                if (!empty(options.outputBreakpointFile))
-                    for (std::vector<std::pair<int, int> >::const_iterator it = breakpoints.begin(); it != breakpoints.end(); ++it)
-                        breakpointsOut << ssName.str() << "\t" << vcfMat.contigVariants.getVariantName(it->second)
-                                       << "\t" << (it->first + 1) << "\n";
 
                 std::stringstream ssTop;
                 ssTop << ssName.str() << "/TOP";
@@ -165,7 +146,7 @@ public:
                     throw MasonIOException("Problem writing to methylation output file.");
             }
         else  // NO methylation level simulation
-            while (vcfMat.materializeNext(seq, breakpoints, rID, hID))
+            while (vcfMat.materializeNext(seq, rID, hID))
             {
                 std::stringstream ssName;
                 ssName << vcfMat.vcfStream.header.sequenceNames[rID] << options.haplotypeNameSep << (hID + 1);
@@ -176,11 +157,6 @@ public:
                     std::cerr << "ERROR: Could not write materialized sequence to output.\n";
                     return 1;
                 }
-
-                if (!empty(options.outputBreakpointFile))
-                    for (std::vector<std::pair<int, int> >::const_iterator it = breakpoints.begin(); it != breakpoints.end(); ++it)
-                        breakpointsOut << ssName.str() << "\t" << vcfMat.contigVariants.getVariantName(it->second)
-                                       << "\t" << (it->first + 1) << "\n";
             }
         std::cerr << " DONE\n";
 

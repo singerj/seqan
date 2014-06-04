@@ -698,7 +698,9 @@ should use the functions @Function.posLocalize@, @Function.posGlobalize@, @Funct
 
 	template < typename TText, typename TSpec >
     struct Size< Index<TText, TSpec> > {
-        typedef typename LengthSum<TText>::Type Type;
+		typedef typename Size<
+			typename Fibre< Index<TText, TSpec>, FibreRawText>::Type 
+		>::Type Type;
     };
 
 	template < typename TText, typename TSpec >
@@ -760,18 +762,6 @@ should use the functions @Function.posLocalize@, @Function.posGlobalize@, @Funct
 		typedef String<
 			typename SAValue< Index<TText, TSpec> >::Type,
 			typename DefaultIndexStringSpec< Index<TText, TSpec> >::Type 
-		> Type;
-	};
-
-//////////////////////////////////////////////////////////////////////////////
-// lcp type
-
-	template <typename TText, typename TSSetSpec, typename TSpec>
-	struct Fibre<Index<StringSet<TText, TSSetSpec>, TSpec>, FibreLcp>
-    {
-		typedef String<
-            typename Size<TText>::Type,
-			typename DefaultIndexStringSpec<Index<StringSet<TText, TSSetSpec>, TSpec> >::Type
 		> Type;
 	};
 

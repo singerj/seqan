@@ -1312,11 +1312,9 @@ parseCommandLine(SNPCallingOptions<TSpec> & options, int argc, char const ** arg
     if(options.runID == "")
     {
         ::std::string tempStr = toCString(options.readFNames[0]);
-        size_t lastPos = tempStr.find_last_of("/\\");
-        if (lastPos == tempStr.npos)
-            lastPos = 0;
-        else
-            ++lastPos;
+        size_t lastPos = tempStr.find_last_of('/') + 1;
+        if (lastPos == tempStr.npos) lastPos = tempStr.find_last_of('\\') + 1;
+        if (lastPos == tempStr.npos) lastPos = 0;
         options.runID = tempStr.substr(lastPos);
     }
 

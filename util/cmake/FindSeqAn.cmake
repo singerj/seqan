@@ -202,8 +202,7 @@ endif (WIN32)
 
 # Visual Studio Setup
 if (MSVC)
-  # Enable intrinics (e.g. _interlockedIncrease)
-  set (SEQAN_CXX_FLAGS "${SEQAN_CXX_FLAGS} /EHsc /Oi")
+  set (SEQAN_CXX_FLAGS "${SEQAN_CXX_FLAGS} /EHsc")
   # Warning level 3 for MSVC is disabled for now to see how much really bad warnings there are.
   #set (SEQAN_CXX_FLAGS "${SEQAN_CXX_FLAGS} /W3)
 

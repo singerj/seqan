@@ -31,6 +31,8 @@
 //
 // ==========================================================================
 
+//SEQAN_NO_GENERATED_FORWARDS: no forwards are generated for this file
+
 /*!
  * @macro PLATFORM_WINDOWS
  * @headerfile <seqan/platform.h>
@@ -45,9 +47,7 @@
  * @signature #define PLATFORM_WINDOWS_MINGW
  */
 
-#ifndef PLATFORM_WINDOWS
 #define PLATFORM_WINDOWS
-
 #define PLATFORM_WINDOWS_MINGW
 
 #define finline __inline__
@@ -79,5 +79,3 @@ typedef unsigned __int8 __uint8;
 #if defined(__GXX_EXPERIMENTAL_CXX0X__)
 #  define SEQAN_CXX11_STANDARD
 #endif
-
-#endif  // #ifndef PLATFORM_WINDOWS

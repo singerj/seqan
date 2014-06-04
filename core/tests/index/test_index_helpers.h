@@ -618,7 +618,7 @@ public:
     TFibre & fibre;
 
     FibreTest() :
-        fibre(getFibre(TBase::index, TFibreTag()))
+        fibre(getFibre(this->index, TFibreTag()))
     {}
 
     void setUp()

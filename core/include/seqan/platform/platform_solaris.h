@@ -31,8 +31,11 @@
 //
 // ==========================================================================
 
+//SEQAN_NO_GENERATED_FORWARDS: no forwards are generated for this file
+
 #ifndef PLATFORM_SUN
-#define PLATFORM_SUN
+  #define PLATFORM_SUN
+#endif
 
 // should be set before including anything
 #define _FILE_OFFSET_BITS 64
@@ -44,5 +47,3 @@
 // default 64bit type
 typedef int64_t __int64;
 typedef uint64_t __uint64;
-
-#endif  // #ifndef PLATFORM_SUN

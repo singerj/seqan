@@ -119,12 +119,11 @@
  * @see SEQAN_DEVICE
  */
 
-#ifndef PLATFORM_CUDA_H_
-#define PLATFORM_CUDA_H_
-
 #ifdef __CUDACC__
 
-#define PLATFORM_CUDA
+#ifndef PLATFORM_CUDA
+  #define PLATFORM_CUDA
+#endif
 
 #define SEQAN_FUNC inline __host__ __device__
 #define SEQAN_HOST_DEVICE __host__ __device__
@@ -145,6 +144,5 @@
 #define SEQAN_DEVICE
 #define SEQAN_GLOBAL
 
-#endif  // #ifdef __CUDACC__
+#endif
 
-#endif  // #ifndef PLATFORM_CUDA_H_

@@ -158,8 +158,6 @@ public:
     mutable String<TPos> _positions;
 
     BamTagsDict() {}
-
-    explicit
     BamTagsDict(TBamTagsSequence & tags) : _host(tags) {}
 
     template <typename TPos>

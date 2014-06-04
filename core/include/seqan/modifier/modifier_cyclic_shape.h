@@ -497,8 +497,10 @@ inline void
 goNext(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > & me)
 {
     host(me) += cargo(me).diffs[me._idx];
-    if (++me._idx == weight(cargo(me)))
+    ++me._idx;
+    if (me._idx == weight(cargo(me)))
         me._idx = 0;
+    // TDOD: replace modulo by small if
 }
 
 // --------------------------------------------------------------------------
@@ -607,13 +609,22 @@ goEnd(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > & me, TConta
 
 template<typename THost, typename TSpec, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > &
-operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta)
+operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta_)
 {
-    if (_isNegative(delta))
+    typedef ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > TIterator;
+    typedef typename Position<TIterator>::Type TPosition;
+    TPosition delta = delta_;
+
+    if (delta == 0)
     {
-        me -= -(typename MakeSigned<TDelta>::Type)delta;
+        return me;
     }
-    else
+    else if (delta == 1)
+    {
+        goNext(me);
+        return me;
+    }
+    else if (delta > 1)                         // runtime O(Q)
     {
         // jump full patterns
         host(me) += (delta / weight(cargo(me))) * cargo(me).span;
@@ -621,6 +632,10 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
         // number of jumps in dist that remain
         for (delta = delta % weight(cargo(me)); delta != 0; --delta)
             goNext(me);
+    }
+    else
+    {
+        me -= -delta;
     }
     return me;
 }
@@ -631,13 +646,22 @@ operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
 
 template<typename THost, typename TSpec, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > &
-operator-=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta)
+operator-=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta_)
 {
-    if (_isNegative(delta))
+    typedef ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > TIterator;
+    typedef typename Position<TIterator>::Type TPosition;
+    TPosition delta = delta_;
+
+    if (delta == 0)
     {
-        me += -(typename MakeSigned<TDelta>::Type)delta;
+        return me;
     }
-    else
+    else if (delta == 1)
+    {
+        goPrevious(me);
+        return me;
+    }
+    else if (delta > 1)                         // runtime O(Q)
     {
         // jump full patterns
         host(me) -= (delta / weight(cargo(me))) * cargo(me).span;
@@ -645,6 +669,10 @@ operator-=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDe
         // number of jumps in dist that remain
         for (delta = delta % weight(cargo(me)); delta != 0; --delta)
             goPrevious(me);
+    }
+    else
+    {
+        me -= -delta;
     }
     return me;
 }

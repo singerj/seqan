@@ -723,8 +723,6 @@ struct MasonMaterializerOptions
 
     // Path to output file.
     seqan::CharString outputFileName;
-    // Path to TSV file to write the resulting breakpoints in variant genomes to.
-    seqan::CharString outputBreakpointFile;
     // Separator between contig names and haplotype number.
     seqan::CharString haplotypeNameSep;
     // FASTA file to load the methylation levels from.
