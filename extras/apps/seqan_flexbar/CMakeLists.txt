@@ -29,20 +29,41 @@ include_directories (${SEQAN_INCLUDE_DIRS})
 add_definitions (${SEQAN_DEFINITIONS})
 
 # Update the list of file names below if you add source files to your application.
-add_executable (seqan_flexbar seqan_flexbar.cpp
-                demultiplex.h
-			    readTrimming.h
-			    adapterTrimming.h
-			    generalProcessing.h)
+#add_executable (seqan_flexbar seqan_flexbar.cpp
+#                seqan_flexbar.h
+#                demultiplex.h
+#			    readTrimming.h
+#			    adapterTrimming.h
+#			    generalProcessing.h)
 add_executable(demultiplex_test demultiplex_test.cpp demultiplex.h)
 add_executable(trimming_test trimming_test.cpp readTrimming.h)
 add_executable(adapter_test adapter_test.cpp adapterTrimming.h)
 add_executable(generalProcessing_test generalProcessing_test.cpp generalProcessing.h)
 
+add_library (seqan_flexbar_lib
+             demultiplex.h
+             readTrimming.h
+             adapterTrimming.h
+             generalProcessing.h
+             seqan_flexbar.h
+             seqan_flexbar.cpp)
+target_link_libraries (seqan_flexbar_lib ${SEQAN_LIBRARIES})
+
+add_executable (seqFlexQC seqan_flexbar_quality_control.cpp)
+add_executable (seqFlexAR seqan_flexbar_adapter_removal.cpp)
+add_executable (seqFlexDMulti seqan_flexbar_demultiplexing.cpp)
+add_executable (seqFlexFilter seqan_flexbar_filtering.cpp)
+add_executable (seqan_flexbar seqan_flexbar_all.cpp)
+
 # Add dependencies found by find_package (SeqAn).
-foreach (EXEC seqan_flexbar trimming_test demultiplex_test
-        adapter_test generalProcessing_test)
-    target_link_libraries (${EXEC} ${SEQAN_LIBRARIES})
+foreach (EXEC trimming_test
+         demultiplex_test adapter_test generalProcessing_test
+         seqan_flexbar
+         seqFlexQC
+         seqFlexAR
+         seqFlexDMulti
+         seqFlexFilter)
+    target_link_libraries (${EXEC} seqan_flexbar_lib ${SEQAN_LIBRARIES})
 endforeach ()
 
 # Add CXX flags found by find_package (SeqAn).
@@ -74,7 +95,7 @@ install (FILES LICENSE
 # App Test
 # ----------------------------------------------------------------------------
 
-#seqan_add_app_test (seqan_flexbar)
+seqan_add_app_test (seqan_flexbar)
 
 # ----------------------------------------------------------------------------
 # Setup Common Tool Description for Generic Workflow Nodes

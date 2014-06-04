@@ -485,7 +485,7 @@ void alignAdapter(seqan::Pair<unsigned, seqan::Align<TSeq> >& ret, TSeq& seq, TA
 ...type:nolink:bool
  */
 //Version for automatic matching options
-bool isMatch(int overlap, int mismatches, const Auto &)
+inline bool isMatch(int overlap, int mismatches, const Auto &)
 {
 	int errors = 0; // No errors for overlap up to 5 bases.
 	if (overlap > 5)
@@ -499,7 +499,7 @@ bool isMatch(int overlap, int mismatches, const Auto &)
 	return mismatches <= errors;
 }
 //Overload for user-definied matching options
-bool isMatch(int overlap, int mismatches, const User& userOptions)
+inline bool isMatch(int overlap, int mismatches, const User& userOptions)
 {
 	return overlap >= userOptions.min_length && mismatches <= userOptions.errors;
 }
