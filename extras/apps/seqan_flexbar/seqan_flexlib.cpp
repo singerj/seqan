@@ -290,10 +290,11 @@ void ArgumentParserBuilder::addReadTrimmingOptions(seqan::ArgumentParser & parse
     // READ TRIMMING
     addSection(parser, "Quality trimming options");
     seqan::ArgParseOption qualOpt = seqan::ArgParseOption(
-        "q", "quality", "Quality threshold for read trimming.",
+        "q", "quality", "Quality threshold for read trimming (Default 30).",
         seqan::ArgParseArgument::INTEGER, "PHRED");
     setMinValue(qualOpt, "0");
     setMaxValue(qualOpt, "40");
+    setDefaultValue(qualOpt, 30);
     addOption(parser, qualOpt);
 
     seqan::ArgParseOption lenOpt = seqan::ArgParseOption(
