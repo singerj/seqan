@@ -128,9 +128,7 @@ _readBedRecordNoData(BedRecord<Bed3> & record,
     // TODO(singer): Realy __int32 for a position ???
     clear(buffer);
     readUntil(buffer, iter, OrFunctor<IsTab, AssertFunctor<NotFunctor<IsNewline>, ParseError, Bed> >());
-    // TODO(singer): WHy - 1???
-    // "chromStart - The starting position of the feature in the chromosome or scaffold. The first base in a chromosome is numbered 0." from UCSC
-    record.beginPos = lexicalCast<__int32>(buffer) - 1;
+    record.beginPos = lexicalCast<__int32>(buffer);
     skipOne(iter);
 
     // Read END.

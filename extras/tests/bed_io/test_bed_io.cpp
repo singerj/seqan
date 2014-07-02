@@ -54,13 +54,13 @@ SEQAN_DEFINE_TEST(test_bed_read_bed3_record)
     // Perform tests.
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
-    SEQAN_ASSERT_EQ(record.beginPos, 122);
+    SEQAN_ASSERT_EQ(record.beginPos, 123);
     SEQAN_ASSERT_EQ(record.endPos, 456);
     SEQAN_ASSERT_EQ(record.data, "some data that is \tignored");
 
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "II");
-    SEQAN_ASSERT_EQ(record.beginPos, 998);
+    SEQAN_ASSERT_EQ(record.beginPos, 999);
     SEQAN_ASSERT_EQ(record.endPos, 1000);
     SEQAN_ASSERT_EQ(record.data, "data again!");
 }
@@ -88,17 +88,17 @@ SEQAN_DEFINE_TEST(test_bed_read_bed3_record_with_context)
     readRecord(record, iter, bedIOContext, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
     SEQAN_ASSERT_EQ(record.rID, 0);
-    SEQAN_ASSERT_EQ(record.beginPos, 122);
+    SEQAN_ASSERT_EQ(record.beginPos, 123);
+
     SEQAN_ASSERT_EQ(record.endPos, 456);
     SEQAN_ASSERT_EQ(record.data, "some data that is \tignored");
-
     SEQAN_ASSERT_EQ(length(refNames), 1u);
     SEQAN_ASSERT_EQ(refNames[0], "I");
 
     readRecord(record, iter, bedIOContext, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "II");
     SEQAN_ASSERT_EQ(record.rID, 1);
-    SEQAN_ASSERT_EQ(record.beginPos, 998);
+    SEQAN_ASSERT_EQ(record.beginPos, 999);
     SEQAN_ASSERT_EQ(record.endPos, 1000);
     SEQAN_ASSERT_EQ(record.data, "data again!");
 
@@ -120,14 +120,14 @@ SEQAN_DEFINE_TEST(test_bed_read_bed4_record)
     // Perform tests.
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
-    SEQAN_ASSERT_EQ(record.beginPos, 122);
+    SEQAN_ASSERT_EQ(record.beginPos, 123);
     SEQAN_ASSERT_EQ(record.endPos, 456);
     SEQAN_ASSERT_EQ(record.name, "NAME");
     SEQAN_ASSERT_EQ(record.data, "some data that is \tignored");
 
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "II");
-    SEQAN_ASSERT_EQ(record.beginPos, 998);
+    SEQAN_ASSERT_EQ(record.beginPos, 999);
     SEQAN_ASSERT_EQ(record.endPos, 1000);
     SEQAN_ASSERT_EQ(record.name, "NAME2");
     SEQAN_ASSERT_EQ(record.data, "data again!");
@@ -148,7 +148,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed5_record)
     // Perform tests.
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
-    SEQAN_ASSERT_EQ(record.beginPos, 122);
+    SEQAN_ASSERT_EQ(record.beginPos, 123);
     SEQAN_ASSERT_EQ(record.endPos, 456);
     SEQAN_ASSERT_EQ(record.name, "NAME");
     SEQAN_ASSERT_EQ(record.score, "3");
@@ -156,7 +156,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed5_record)
 
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "II");
-    SEQAN_ASSERT_EQ(record.beginPos, 998);
+    SEQAN_ASSERT_EQ(record.beginPos, 999);
     SEQAN_ASSERT_EQ(record.endPos, 1000);
     SEQAN_ASSERT_EQ(record.name, "NAME2");
     SEQAN_ASSERT_EQ(record.score, "2e5");
@@ -179,7 +179,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed6_record)
 
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
-    SEQAN_ASSERT_EQ(record.beginPos, 122);
+    SEQAN_ASSERT_EQ(record.beginPos, 123);
     SEQAN_ASSERT_EQ(record.endPos, 456);
     SEQAN_ASSERT_EQ(record.name, "NAME");
     SEQAN_ASSERT_EQ(record.score, "3");
@@ -188,7 +188,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed6_record)
 
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "II");
-    SEQAN_ASSERT_EQ(record.beginPos, 998);
+    SEQAN_ASSERT_EQ(record.beginPos, 999);
     SEQAN_ASSERT_EQ(record.endPos, 1000);
     SEQAN_ASSERT_EQ(record.name, "NAME2");
     SEQAN_ASSERT_EQ(record.score, "2e5");
@@ -212,7 +212,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed12_record)
 
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
-    SEQAN_ASSERT_EQ(record.beginPos, 122);
+    SEQAN_ASSERT_EQ(record.beginPos, 123);
     SEQAN_ASSERT_EQ(record.endPos, 456);
     SEQAN_ASSERT_EQ(record.name, "NAME");
     SEQAN_ASSERT_EQ(record.score, "3");
@@ -233,7 +233,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed12_record)
 
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "II");
-    SEQAN_ASSERT_EQ(record.beginPos, 998);
+    SEQAN_ASSERT_EQ(record.beginPos, 999);
     SEQAN_ASSERT_EQ(record.endPos, 1000);
     SEQAN_ASSERT_EQ(record.name, "NAME2");
     SEQAN_ASSERT_EQ(record.score, "2e5");
@@ -257,7 +257,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed3_record)
 {
     seqan::BedRecord<seqan::Bed3> record1;
     record1.ref = "I";
-    record1.beginPos = 122;
+    record1.beginPos = 123;
     record1.endPos = 456;
     record1.data = "some data that is \tignored";
 
@@ -274,7 +274,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed3_record)
 
     // Compar string stream to expected value.
     String<char> expected = "I\t123\t456\tsome data that is \tignored\n";
-    append(expected, "II\t1000\t1000\tdata again!\n");
+    append(expected, "II\t999\t1000\tdata again!\n");
     SEQAN_ASSERT_EQ(out, expected);
 }
 
@@ -291,7 +291,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed3_record_with_context)
     seqan::BedRecord<seqan::Bed3> record1;
     record1.ref = "I";
     record1.rID = 1;
-    record1.beginPos = 122;
+    record1.beginPos = 123;
     record1.endPos = 456;
     record1.data = "some data that is \tignored";
 
@@ -309,7 +309,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed3_record_with_context)
 
     // Compar string stream to expected value.
     String<char> expected = "1\t123\t456\tsome data that is \tignored\n";
-    append(expected, "0\t1000\t1000\tdata again!\n");
+    append(expected, "0\t999\t1000\tdata again!\n");
     SEQAN_ASSERT_EQ(out, expected);
 }
 
@@ -317,7 +317,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed4_record)
 {
     seqan::BedRecord<seqan::Bed4> record1;
     record1.ref = "I";
-    record1.beginPos = 122;
+    record1.beginPos = 123;
     record1.endPos = 456;
     record1.name = "NAME1";
     record1.data = "some data that is \tignored";
@@ -336,7 +336,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed4_record)
 
     // Compar string stream to expected value.
     String<char> expected = "I\t123\t456\tNAME1\tsome data that is \tignored\n";
-    append(expected, "II\t1000\t1000\tNAME2\tdata again!\n");
+    append(expected, "II\t999\t1000\tNAME2\tdata again!\n");
     SEQAN_ASSERT_EQ(out, expected);
 }
 
@@ -344,7 +344,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed5_record)
 {
     seqan::BedRecord<seqan::Bed5> record1;
     record1.ref = "I";
-    record1.beginPos = 122;
+    record1.beginPos = 123;
     record1.endPos = 456;
     record1.name = "NAME1";
     record1.score = "5";
@@ -365,7 +365,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed5_record)
 
     // Compar string stream to expected value.
     String<char> expected = "I\t123\t456\tNAME1\t5\tsome data that is \tignored\n";
-    append(expected, "II\t1000\t1000\tNAME2\t3e5\tdata again!\n");
+    append(expected, "II\t999\t1000\tNAME2\t3e5\tdata again!\n");
     SEQAN_ASSERT_EQ(out, expected);
 }
 
@@ -373,7 +373,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed6_record)
 {
     seqan::BedRecord<seqan::Bed6> record1;
     record1.ref = "I";
-    record1.beginPos = 122;
+    record1.beginPos = 123;
     record1.endPos = 456;
     record1.name = "NAME1";
     record1.score = "5";
@@ -396,7 +396,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed6_record)
 
     // Compar string stream to expected value.
     String<char> expected = "I\t123\t456\tNAME1\t5\t-\tsome data that is \tignored\n";
-    append(expected, "II\t1000\t1000\tNAME2\t3e5\t.\tdata again!\n");
+    append(expected, "II\t999\t1000\tNAME2\t3e5\t.\tdata again!\n");
     SEQAN_ASSERT_EQ(out, expected);
 }
 
@@ -404,7 +404,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed12_record)
 {
     seqan::BedRecord<seqan::Bed12> record1;
     record1.ref = "I";
-    record1.beginPos = 122;
+    record1.beginPos = 123;
     record1.endPos = 456;
     record1.name = "NAME1";
     record1.score = "5";
@@ -447,7 +447,7 @@ SEQAN_DEFINE_TEST(test_bed_write_bed12_record)
 
     // Compar string stream to expected value.
     String<char> expected = "I\t123\t456\tNAME1\t5\t-\t124\t234\t10,20,30\t2\t10,20\t4,16\tsome data that is \tignored\n";
-    append(expected, "II\t1000\t1000\tNAME2\t3e5\t.\t124\t234\t10,20,30\t2\t10,20\t4,16\tdata again!\n");
+    append(expected, "II\t999\t1000\tNAME2\t3e5\t.\t124\t234\t10,20,30\t2\t10,20\t4,16\tdata again!\n");
     SEQAN_ASSERT_EQ(out, expected);
 }
 /*

@@ -102,9 +102,7 @@ _writeBedRecord(TTarget & target, BedRecord<Bed3> const & record, CharString con
 {
     write(target, ref);
     writeValue(target, '\t');
-    // TODO(singer): Why + 1?
-    // "chromStart - The starting position of the feature in the chromosome or scaffold. The first base in a chromosome is numbered 0." from UCSC
-    appendNumber(target, record.beginPos + 1);
+    appendNumber(target, record.beginPos);
     writeValue(target, '\t');
     appendNumber(target, record.endPos);
 }
