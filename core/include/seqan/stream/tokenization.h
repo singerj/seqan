@@ -37,6 +37,8 @@
 #ifndef SEQAN_STREAM_TOKENIZATION_H_
 #define SEQAN_STREAM_TOKENIZATION_H_
 
+//TODO(singer): We need to make sure that only rooted iter can be used!
+
 namespace seqan {
 
 // ============================================================================

@@ -107,7 +107,7 @@ When $context$ is given, the $rID$ field is filled and the context's name store 
 // overloads.  The one for Bed$N$ calls the one with Bed$N-1$.
 
 // Helper function that reads first three fields of BED record.
-// NoData means the the member data (for the columns not read) is not
+// NoData means the member data (for the columns not read) is not
 // filled.
 template <typename TForwardIter>
 inline void 
@@ -137,14 +137,9 @@ _readBedRecordNoData(BedRecord<Bed3> & record,
     clear(buffer);
     readUntil(buffer, iter, OrFunctor<IsTab, IsNewline>());
     record.endPos = lexicalCast<__int32>(buffer);
-
-    // Go over tab if any.
-    if (!atEnd(iter) && value(iter) != '\r' && value(iter) != '\n')
-        skipOne(iter);
 }
 
-// Read first four fields without data.
-
+// Read first four fields without data field.
 template <typename TForwardIter>
 inline void 
 _readBedRecordNoData(BedRecord<Bed4> & record,
@@ -154,15 +149,14 @@ _readBedRecordNoData(BedRecord<Bed4> & record,
     // Read first three fields.
     _readBedRecordNoData(static_cast<BedRecord<Bed3> &>(record), iter, buffer);
 
+    // Go over tab if any.
+    skipOne(iter, IsTab());
+
     // Read NAME.
     readUntil(record.name, iter, OrFunctor<IsTab, IsNewline>());
-
-    // Go over tab if any.
-    if (!atEnd(iter) && value(iter) != '\r' && value(iter) != '\n')
-        skipOne(iter);
 }
 
-// Read first five fields without data.
+// Read first five fields without data field.
 
 template <typename TForwardIter>
 inline void
@@ -173,15 +167,14 @@ _readBedRecordNoData(BedRecord<Bed5> & record,
     // Read first four fields.
     _readBedRecordNoData(static_cast<BedRecord<Bed4 > &>(record), iter, buffer);
 
+    // Go over tab if any.
+    skipOne(iter, IsTab());
+
     // Read SCORE.
     readUntil(record.score, iter, OrFunctor<IsTab, IsNewline>());
-
-    // Go over tab if any.
-    if (!atEnd(iter) && value(iter) != '\r' && value(iter) != '\n')
-        skipOne(iter);
 }
 
-// Read first six fields without data.
+// Read first six fields without data field.
 
 template <typename TForwardIter>
 inline void
@@ -192,17 +185,15 @@ _readBedRecordNoData(BedRecord<Bed6> & record,
     // Read first three fields.
     _readBedRecordNoData(static_cast<BedRecord<Bed5 > &>(record), iter, buffer);
 
+    // Go over tab if any.
+    skipOne(iter, IsTab());
+
     // Read STRAND.
     record.strand = value(iter);
     skipOne(iter, OrFunctor<OrFunctor<EqualsChar<'.'>, EqualsChar<'+'> >, EqualsChar<'-'> >());
-
-    // Go over tab if any.
-    if (!atEnd(iter) && value(iter) != '\r' && value(iter) != '\n')
-        skipOne(iter);
 }
 
-// Read first twelve fields without data.
-
+// Read first twelve fields without data field.
 template <typename TForwardIter>
 inline void
 _readBedRecordNoData(BedRecord<Bed12> & record,
@@ -212,6 +203,10 @@ _readBedRecordNoData(BedRecord<Bed12> & record,
     IsNewline isNewline;
     // Read first three fields.
     _readBedRecordNoData(static_cast<BedRecord<Bed6 > &>(record), iter, buffer);
+
+    // Go over tab if any.
+    skipOne(iter, IsTab());
+
 
     // Read THICK BEGIN
     clear(buffer);
@@ -297,6 +292,9 @@ readRecord(BedRecord<TSpec> & record,
     // Read data if any, skipping over the line.
     if (!atEnd(iter) && value(iter) != '\r' && value(iter) != '\n')
     {
+        if (value(iter) == '\t')
+            skipOne(iter);
+        clear(record.data);
         readLine(record.data, iter);
         return;
     }

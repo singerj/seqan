@@ -46,7 +46,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed3_record)
     String<char> test = "I\t123\t456\tsome data that is \tignored\n";
     append(test, "II\t999\t1000\tdata again!");
 
-    Iterator<String<char> >::Type iter = begin(test);
+    Iterator<String<char>, Rooted>::Type iter = begin(test);
 
     // The record to load into.
     seqan::BedRecord<seqan::Bed3> record;
@@ -72,7 +72,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed3_record_with_context)
     append(test, "II\t999\t1000\tdata again!");
 
     // Iterator to use
-    Iterator<String<char> >::Type iter = begin(test);
+    Iterator<String<char>, Rooted>::Type iter = begin(test);
 
     // The record to load into.
     seqan::BedRecord<seqan::Bed3> record;
@@ -112,13 +112,12 @@ SEQAN_DEFINE_TEST(test_bed_read_bed4_record)
     append(test, "II\t999\t1000\tNAME2\tdata again!");
 
     // Iterator to use
-    Iterator<String<char> >::Type iter = begin(test);
+    Iterator<String<char>, Rooted>::Type iter = begin(test);
 
     // The record to load into.
     seqan::BedRecord<seqan::Bed4> record;
 
     // Perform tests.
-
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
     SEQAN_ASSERT_EQ(record.beginPos, 122);
@@ -141,13 +140,12 @@ SEQAN_DEFINE_TEST(test_bed_read_bed5_record)
     append(test, "II\t999\t1000\tNAME2\t2e5\tdata again!");
 
     // Iterator to use
-    Iterator<String<char> >::Type iter = begin(test);
+    Iterator<String<char>, Rooted>::Type iter = begin(test);
 
     // The record to load into.
     seqan::BedRecord<seqan::Bed5> record;
 
     // Perform tests.
-
     readRecord(record, iter, seqan::Bed());
     SEQAN_ASSERT_EQ(record.ref, "I");
     SEQAN_ASSERT_EQ(record.beginPos, 122);
@@ -172,7 +170,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed6_record)
     append(test, "II\t999\t1000\tNAME2\t2e5\t.\tdata again!");
 
     // Iterator to use
-    Iterator<String<char> >::Type iter = begin(test);
+    Iterator<String<char>, Rooted>::Type iter = begin(test);
 
     // The record to load into.
     seqan::BedRecord<seqan::Bed6> record;
@@ -205,7 +203,7 @@ SEQAN_DEFINE_TEST(test_bed_read_bed12_record)
     append(test, "II\t999\t1000\tNAME2\t2e5\t.\t44\t55\t0,0,0\t3\t3,4,5\t4,5,6\tdata again!");
 
     // Iterator to use
-    Iterator<String<char> >::Type iter = begin(test);
+    Iterator<String<char>, Rooted>::Type iter = begin(test);
 
     // The record to load into.
     seqan::BedRecord<seqan::Bed12> record;
