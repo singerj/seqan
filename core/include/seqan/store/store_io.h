@@ -1692,6 +1692,7 @@ Mate pairs are stored internally in an "interleaved" mode, i.e. a read is read f
 template <typename TFSSpec, typename TFSConfig, typename TFileName>
 bool loadReads(FragmentStore<TFSSpec, TFSConfig> &store, TFileName &fileName)
 {
+    /*
 	MultiSeqFile multiSeqFile;
 	if (!open(multiSeqFile.concat, toCString(fileName), OPEN_RDONLY))
 		return false;
@@ -1726,12 +1727,14 @@ bool loadReads(FragmentStore<TFSSpec, TFSConfig> &store, TFileName &fileName)
 		appendRead(store, seq, _id);
 	}
     return true;
+    */
 }
 
 
 template <typename TFSSpec, typename TFSConfig, typename TFileName>
 bool loadReads(FragmentStore<TFSSpec, TFSConfig> & store, TFileName & fileNameL, TFileName & fileNameR)
 {
+    /*
 	MultiSeqFile multiSeqFileL, multiSeqFileR;
 	if (!open(multiSeqFileL.concat, toCString(fileNameL), OPEN_RDONLY))
 		return false;
@@ -1778,6 +1781,7 @@ bool loadReads(FragmentStore<TFSSpec, TFSConfig> & store, TFileName & fileNameL,
 		appendMatePair(store, seq[0], seq[1], _id[0], _id[1]);
 	}
 	return true;
+	*/
 }
 
 }  // namespace SEQAN_NAMESPACE_MAIN

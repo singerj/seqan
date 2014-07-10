@@ -552,7 +552,6 @@ open(VirtualStream<TValue, TDirection> &stream, const char *fileName, int openMo
 template <typename TValue, typename TDirection, typename TFormatTag>
 VirtualStreamContext_<TValue, TDirection, TFormatTag>::~VirtualStreamContext_()
 {
-    static_cast<Nothing>(this->stream);
     flush(this->stream);
 }
 
