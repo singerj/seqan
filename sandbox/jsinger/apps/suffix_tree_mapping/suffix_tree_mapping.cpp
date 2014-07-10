@@ -75,11 +75,13 @@ struct AppOptions
     int numThreads;
     unsigned bufferSize;
     bool onlyStoreIndex;
+    unsigned geneticCode;
 
     AppOptions() :
         numThreads(1),
         bufferSize(100000),
-        onlyStoreIndex(false)
+        onlyStoreIndex(false),
+        geneticCode(0)
     {}
 };
 
@@ -130,6 +132,9 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 
     addOption(parser, ArgParseOption("th", "threads", "The number of threads to be used.", ArgParseArgument::INTEGER));
     addOption(parser, ArgParseOption("bf", "bufferSize", "The number of hits stored in a buffer before writing them to disk.", ArgParseArgument::INTEGER));
+    ArgParseOption gcOption("gc", "geneticCode", "The genetic code to be used for translation.", ArgParseArgument::INTEGER);
+    setHelpText(gcOption, "There are several different genetic codes available taken from NCBI: 0: Canonical, 1: VertMitochondrial, 2: YeastMitochondrial, 3: MoldMitochondrial, 4: InvertMitochondrial, 5: Ciliate, 6: FlatwormMitochondrial, 7: Euplotid, 8: Prokaryote, 9: AltYeast, 10: AscidianMitochondrial, 11: AltFlatwormMitochondrial, 12: Blepherisma, 13: ChlorophyceanMitochondrial, 14: TrematodeMitochondrial, 15: ScenedesmusMitochondrial, 16: ThraustochytriumMitochondrial, 17: PterobranchiaMitochondrial, 18: Gracilibacteria");
+    addOption(parser, gcOption);
 
     // Add Examples Section.
     addTextSection(parser, "Examples");
@@ -152,6 +157,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     getOptionValue(options.inputType, parser, "t");
     getOptionValue(options.numThreads, parser, "th");
     getOptionValue(options.bufferSize, parser, "bf");
+    getOptionValue(options.geneticCode, parser, "gc");
     options.onlyStoreIndex = isSet(parser, "storeOnly");
 
     return seqan::ArgumentParser::PARSE_OK;
@@ -279,7 +285,48 @@ int main(int argc, char const ** argv)
         {
             //for (unsigned i = 0; i < length(dbRaw); ++i)
               //  appendValue(dbDna, dbRaw[i]);
-            translate(aaSeqs, dbRaw, SIX_FRAME);
+            switch(options.geneticCode) {
+                case (0) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Canonical>());
+                           break;
+                case (1) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<VertMitochondrial>());
+                           break;
+                case (2) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<YeastMitochondrial>());
+                           break;
+                case (3) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<MoldMitochondrial>());
+                           break;
+                case (4) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<InvertMitochondrial>());
+                           break;
+                case (5) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Ciliate>());
+                           break;
+                case (6) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<FlatwormMitochondrial>());
+                           break;
+                case (7) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Euplotid>());
+                           break;
+                case (8) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Prokaryote>());
+                           break;
+                case (9) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<AltYeast>());
+                           break;
+                case (10) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<AscidianMitochondrial>());
+                           break;
+                case (11) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<AltFlatwormMitochondrial>());
+                           break;
+                case (12) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Blepherisma>());
+                           break;
+                case (13) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ChlorophyceanMitochondrial>());
+                           break;
+                case (14) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<TrematodeMitochondrial>());
+                           break;
+                case (15) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ScenedesmusMitochondrial>());
+                           break;
+                case (16) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ThraustochytriumMitochondrial>());
+                           break;
+                case (17) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<PterobranchiaMitochondrial>());
+                           break;
+                case (18) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Gracilibacteria>());
+                           break;
+                default : std::cout << "Unknown Gentetic Code!" << std::endl;
+                          return 1;
+            }
             _index = TIndex(aaSeqs);
         }
         else
