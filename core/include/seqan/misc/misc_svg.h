@@ -401,6 +401,8 @@ SEQAN_CHECKPOINT
 }
 */
 
+// TODO(singer): this needs to be fixed!
+/*
 inline SVGFile &
 operator << (SVGFile & target, char source)
 {
@@ -416,7 +418,7 @@ SEQAN_CHECKPOINT
 	write(target, source);
 	return target;
 }
-
+*/
 
 template <typename TStringSet, typename TTrace, typename TIndexPair>
 void

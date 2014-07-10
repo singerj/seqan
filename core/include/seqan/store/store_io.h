@@ -36,6 +36,7 @@
 #define SEQAN_HEADER_STORE_IO_H
 
 #include <seqan/misc/misc_parsing.h>
+#include <seqan/seq_io.h>
 
 /* IOREV
  *
@@ -178,6 +179,7 @@ getClrRange(FragmentStore<TSpec, TConfig> const& fragStore,
 ..include:seqan/store.h
 */
 
+/*
 template<typename TFile, typename TSpec, typename TConfig>
 inline int
 read(TFile & file,
@@ -788,7 +790,7 @@ read(TFile & file,
 
     return 0;
 }
-
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -815,7 +817,7 @@ read(TFile & file,
 ..returns:An $int$ with the status code. $0$ on success, non-$0$ on errors.
 ..include:seqan/store.h
 */
-
+/*
 template<typename TFile, typename TSpec, typename TConfig>
 inline int
 write(TFile & target,
@@ -1184,7 +1186,7 @@ write(TFile & target,
     }
     return 0;
 }
-
+*/
 //////////////////////////////////////////////////////////////////////////////
 
 /*!
@@ -1264,53 +1266,102 @@ If $false$, an empty contig with a reference to the file is created. Its sequenc
 ..include:seqan/store.h
 */
 
+/*
 template <typename TFSSpec, typename TFSConfig>
 bool loadContigs(FragmentStore<TFSSpec, TFSConfig> &store, StringSet<CharString> const &fileNameList, bool loadSeqs)
 {
 //IOREV _nodoc_ although there is dddoc, there is no entry in html-doc
-	typedef FragmentStore<TFSSpec, TFSConfig>			TFragmentStore;
-	typedef typename TFragmentStore::TContigStore		TContigStore;
-	typedef typename TFragmentStore::TContigFileStore	TContigFileStore;
-	typedef typename Value<TContigStore>::Type			TContig;
-	typedef typename Value<TContigFileStore>::Type		TContigFile;
-	
-	unsigned seqOfs = length(store.contigStore);
-	for (unsigned filecount = 0; filecount < length(fileNameList); ++filecount)
-	{
-		MultiSeqFile multiSeqFile;
-		if (!open(multiSeqFile.concat, toCString(fileNameList[filecount]), OPEN_RDONLY))
-			return false;
+    typedef FragmentStore<TFSSpec, TFSConfig>           TFragmentStore;
+    typedef typename TFragmentStore::TContigStore       TContigStore;
+    typedef typename TFragmentStore::TContigFileStore   TContigFileStore;
+    typedef typename Value<TContigStore>::Type          TContig;
+    typedef typename Value<TContigFileStore>::Type      TContigFile;
 
-		TContigFile contigFile;
-		guessFormat(multiSeqFile.concat, contigFile.format);		// guess file format
-		split(multiSeqFile, contigFile.format);						// divide into single sequences
+    unsigned seqOfs = length(store.contigStore);
+    for (unsigned filecount = 0; filecount < length(fileNameList); ++filecount)
+    {
+        MultiSeqFile multiSeqFile;
+        if (!open(multiSeqFile.concat, toCString(fileNameList[filecount]), OPEN_RDONLY))
+            return false;
 
-		contigFile.fileName = fileNameList[filecount];
-		contigFile.firstContigId = seqOfs;
-		appendValue(store.contigFileStore, contigFile, Generous());
+        TContigFile contigFile;
 
-		unsigned seqCount = length(multiSeqFile);
-		resize(store.contigStore, seqOfs + seqCount, Generous());
-		resize(store.contigNameStore, seqOfs + seqCount, Generous());
-		for (unsigned i = 0; i < seqCount; ++i)
-		{
-			store.contigStore[seqOfs + i].usage = 0;
-			store.contigStore[seqOfs + i].fileBeginPos = beginPosition(multiSeqFile[i]);
-			store.contigStore[seqOfs + i].fileEndPos = endPosition(multiSeqFile[i]);
-			store.contigStore[seqOfs + i].fileId = length(store.contigFileStore) - 1;
-			if (loadSeqs)
-				assignSeq(store.contigStore[seqOfs + i].seq, multiSeqFile[i], contigFile.format);	// read Genome sequence
-			else
+        contigFile.fileName = fileNameList[filecount];
+        contigFile.firstContigId = seqOfs;
+        appendValue(store.contigFileStore, contigFile, Generous());
+
+        unsigned seqCount = length(multiSeqFile);
+        resize(store.contigStore, seqOfs + seqCount, Generous());
+        resize(store.contigNameStore, seqOfs + seqCount, Generous());
+        for (unsigned i = 0; i < seqCount; ++i)
+        {
+            store.contigStore[seqOfs + i].usage = 0;
+            store.contigStore[seqOfs + i].fileBeginPos = beginPosition(multiSeqFile[i]);
+            store.contigStore[seqOfs + i].fileEndPos = endPosition(multiSeqFile[i]);
+            store.contigStore[seqOfs + i].fileId = length(store.contigFileStore) - 1;
+            if (loadSeqs)
+                assignSeq(store.contigStore[seqOfs + i].seq, multiSeqFile[i], contigFile.format);    // read Genome sequence
+            else
             {
                 typename TContig::TContigSeq emptySeq;
                 swap(store.contigStore[seqOfs + i].seq, emptySeq);
             }
-			assignCroppedSeqId(store.contigNameStore[seqOfs + i], multiSeqFile[i], contigFile.format);
-		}
-		seqOfs += seqCount;
-	}
-	reserve(store.contigStore, seqOfs, Exact());
-	return seqOfs > 0;
+            assignCroppedSeqId(store.contigNameStore[seqOfs + i], multiSeqFile[i], contigFile.format);
+        }
+        seqOfs += seqCount;
+    }
+    reserve(store.contigStore, seqOfs, Exact());
+    return seqOfs > 0;
+}
+*/
+
+template <typename TFSSpec, typename TFSConfig>
+bool loadContigs(FragmentStore<TFSSpec, TFSConfig> &store, StringSet<CharString> const &fileNameList, bool loadSeqs)
+{
+//IOREV _nodoc_ although there is dddoc, there is no entry in html-doc
+    typedef FragmentStore<TFSSpec, TFSConfig>           TFragmentStore;
+    typedef typename TFragmentStore::TContigStore       TContigStore;
+    typedef typename TFragmentStore::TContigFileStore   TContigFileStore;
+    typedef typename Value<TContigStore>::Type          TContig;
+    typedef typename Value<TContigFileStore>::Type      TContigFile;
+
+    unsigned seqOfs = length(store.contigStore);
+    typename TContig::TContigSeq emptySeq;
+
+    for (unsigned filecount = 0; filecount < length(fileNameList); ++filecount)
+    {
+        SequenceFile<Input> seqFile;
+        if (!open(seqFile, toCString(fileNameList[filecount]), OPEN_RDONLY))
+            return false;
+
+        TContigFile contigFile;
+
+        contigFile.fileName = fileNameList[filecount];
+        contigFile.firstContigId = seqOfs;
+        appendValue(store.contigFileStore, contigFile, Generous());
+
+        while(!atEnd(seqFile.iter))
+        {
+            unsigned nextEntry = length(store.contigStore);
+            resize(store.contigStore, nextEntry + 1, Generous());
+            resize(store.contigNameStore, nextEntry, Generous());
+
+            store.contigStore[nextEntry].usage = 0;
+            store.contigStore[nextEntry].fileBeginPos = position(seqFile.iter);
+            store.contigStore[nextEntry].fileId = length(store.contigFileStore) - 1;
+
+            if (loadSeqs)
+                readRecord(store.contigNameStore[nextEntry], store.contigStore[nextEntry].seq, seqFile.iter, contigFile.format);
+            else
+            {
+                readRecord(store.contigNameStore[nextEntry], emptySeq, seqFile.iter, contigFile.format);
+                clear(emptySeq);
+                swap(store.contigStore[nextEntry].seq, emptySeq);
+            }
+            store.contigStore[nextEntry].fileEndPos = position(seqFile.iter);
+        }
+    }
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
