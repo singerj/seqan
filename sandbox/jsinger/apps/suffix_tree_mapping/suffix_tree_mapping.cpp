@@ -32,6 +32,8 @@
 // Author: Your Name <your.email@example.net>
 // ==========================================================================
 
+#define SEQAN_DEBUG_INDEX
+
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
 #include <seqan/gff_io.h>
@@ -239,17 +241,9 @@ int main(int argc, char const ** argv)
     std::cout << "Suffix-Tree Mapper\n"
               << "==================\n\n";
 
-    // Print the command line arguments back to the user.
-    /*if (options.verbosity > 0)
-    {
-        std::cout << "__OPTIONS____________________________________________________________________\n"
-                  << '\n'
-                  << "VERBOSITY\t" << options.verbosity << '\n';
-    }*/
-
     // DB
     double startTime = sysTime();
-    std::cout << "Reading (translateing) database took ";
+    std::cout << "Reading database took ";
     seqan::SequenceStream seqInDB(seqan::toCString(options.dbFileName));
     seqan::StringSet<seqan::CharString> dbIds;
     seqan::StringSet<seqan::String<char>, Owner<seqan::ConcatDirect<> > > dbRaw;
@@ -267,8 +261,6 @@ int main(int argc, char const ** argv)
     std::cout << sysTime() - startTime << " seconds" << std::endl;
 
 
-    seqan::StringSet<seqan::String<Dna5>, Owner<seqan::ConcatDirect<> > > dbDna;
-    //seqan::StringSet<seqan::String<AminoAcid> > dbAmino;
     seqan::StringSet<String<AminoAcid>, Owner<ConcatDirect<> > > aaSeqs;
 
     typedef Index<StringSet<String<AminoAcid>, Owner<ConcatDirect<> > > > TIndex;
@@ -283,8 +275,6 @@ int main(int argc, char const ** argv)
     {
         if (options.inputType == "dna")
         {
-            //for (unsigned i = 0; i < length(dbRaw); ++i)
-              //  appendValue(dbDna, dbRaw[i]);
             switch(options.geneticCode) {
                 case (0) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Canonical>());
                            break;
@@ -348,6 +338,9 @@ int main(int argc, char const ** argv)
     for (unsigned i = 0; i < length(origLength); ++i)
         origLength[i] = length(dbRaw[i]);
 
+    // free some space
+    clear(dbRaw);
+    shrinkToFit(dbRaw);
 
     seqan::SequenceStream seqInSample(seqan::toCString(options.sampleFileName));
     std::fstream fout(toCString(options.outputFileName), std::ios::binary | std::ios::out | std::ios::app);
@@ -366,7 +359,7 @@ int main(int argc, char const ** argv)
 
             if (!atEnd(seqInSample))
             {
-                if(seqan::readBatch(sampleIds, sampleSeqs, seqInSample, 100000) != 0)
+                if(seqan::readBatch(sampleIds, sampleSeqs, seqInSample, options.bufferSize) != 0)
                 {
 
                     std::cout << "ERROR: Could not read samples!\n";
@@ -424,12 +417,7 @@ int main(int argc, char const ** argv)
                     record.ref=dbIds[position(finder).i1];
                     record.source=options.sampleFileName;
                     record.beginPos=position(finder).i2;
-
-                    std::cerr << "record.beginPos: " << record.beginPos << std::endl;
-
                     record.endPos=record.beginPos + length(sampleSeqs[i]);
-                    std::cerr << "record.endPos: " << record.endPos << " " << length(sampleSeqs[i]) << " " << length(sampleSeqs) <<  std::endl;
-
                     record.tagValue[0] = sampleIds[i];
                     record.tagValue[1] = record.source;
                     appendValue(records, record);
