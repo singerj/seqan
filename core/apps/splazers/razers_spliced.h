@@ -206,9 +206,9 @@ bool loadReadsSam(
 	bool countN = !(options.matchN || options.outputFormat == 1 );
 	if (!empty(CharString(options.outputUnmapped))) countN = false;
 
-	::std::ifstream file;
-	file.open(fileName, ::std::ios_base::in | ::std::ios_base::binary);
-	if (!file.is_open()) return false;
+	//::std::ifstream file;
+	//file.open(fileName, ::std::ios_base::in | ::std::ios_base::binary);
+	//if (!file.is_open()) return false;
 
 	options.maxReadRegionsEnd = 0;
 	options.minReadRegionsStart = maxValue<int>();
@@ -225,7 +225,8 @@ bool loadReadsSam(
     //TReadName lastQname;
     //bool lastWasAnchored = false;
 	int kickoutcount = 0;
-    RecordReader<std::ifstream, SinglePass<> > reader(file);
+    //RecordReader<std::ifstream, SinglePass<> > reader(file);
+    BamFile<Input> bamFile(fileName);
 
     // Setup name store, cache, and BAM I/O context.
     typedef seqan::StringSet<seqan::CharString> TNameStore;
@@ -237,21 +238,23 @@ bool loadReadsSam(
 
     // Read header.
     BamHeader header;
-    if (readRecord(header, bamIOContext, reader, Sam()) != 0)
+    readRecord(header, bamFile);//bamIOContext, bamFile.iter, bamFile.format);
+    /*if (readRecord(header, bamIOContext, reader, Sam()) != 0)
     {
         std::cerr << "ERROR: Could not read header from SAM file " << fileName << "\n";
         return false;
-    }
+    }*/
 
     // Read records.
     BamAlignmentRecord record;
     while (!atEnd(reader))
     {
-        if (readRecord(record, bamIOContext, reader, Sam()) != 0)
+        readRecord(record, bamFile);
+        /*if (readRecord(record, bamIOContext, reader, Sam()) != 0)
         {
             std::cerr << "ERROR: Problem while reading sam record from " << fileName << "\n";
             return false;
-        }
+        }*/
         if (record.rID == -1)
             continue;  // Skip if orphan.
 

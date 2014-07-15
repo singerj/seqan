@@ -499,6 +499,7 @@ bool loadReads(
 	if(options.microRNA) countN = false;
 #endif
 
+    typedef StringSet<String<char, MMap<> >, Owner<ConcatDirect<> > > MultiFasta;
 	MultiFasta multiFasta;
 	if (!open(multiFasta.concat, fileName, OPEN_RDONLY)) return false;
 
