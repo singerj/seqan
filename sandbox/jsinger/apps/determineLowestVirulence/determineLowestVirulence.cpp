@@ -382,192 +382,199 @@ int main(int argc, char const ** argv)
             return 1;
         }
 
-        /*
-        // only for testing
-        // computing the score of the original seqeunce
-        double score = 0;
-        for (unsigned i = 3; i < length(seq); i += 3)
-            score += transitionProb[hashCodon(infix(seq, i-3, i))][hashCodon(infix(seq, i, i+3))];
-        std::cerr << "The score of the provided sequence is: " << score / (((double)length(seq) / 3.0) - 1.0) << std::endl;
-        */
-
-        // creating the graph
-        /*
-
-        TProperties codons;
-        String<AminoAcid> text;
-        translate(text, seq);
-
-        StringSet<String<TVertexDescriptor> > vertices;
-        resize(vertices, length(text) + 2);
-        resize(vertices[0], 1);
-        resize(vertices[length(vertices) - 1], 1);
-
-        TGraph g;
-
-        vertices[0][0] = addVertex(g);
-        vertices[length(vertices) - 1][0] = addVertex(g);
-
-        for (unsigned i = 0; i < length(text); ++i)
+        if (length(seq) > 3000)
         {
-            resize(vertices[i + 1], length(_table.table[ordValue(text[i])]));
-            for (unsigned j = 0; j < length(vertices[i + 1]); ++j)
-                vertices[i + 1][j] = addVertex(g);
-        }
 
+            /*
+            // only for testing
+            // computing the score of the original seqeunce
+            double score = 0;
+            for (unsigned i = 3; i < length(seq); i += 3)
+                score += transitionProb[hashCodon(infix(seq, i-3, i))][hashCodon(infix(seq, i, i+3))];
+            std::cerr << "The score of the provided sequence is: " << score / (((double)length(seq) / 3.0) - 1.0) << std::endl;
+            */
 
-        resizeVertexMap(g, codons);
-        assignProperty(codons, vertices[0][0], "start");
-        assignProperty(codons, vertices[length(vertices) - 1][0], "end");
-        for (unsigned i = 0; i < length(text); ++i)
-        {
-            for (unsigned j = 0; j < length(vertices[i + 1]); ++j)
+            // creating the graph
+            /*
+
+            TProperties codons;
+            String<AminoAcid> text;
+            translate(text, seq);
+
+            StringSet<String<TVertexDescriptor> > vertices;
+            resize(vertices, length(text) + 2);
+            resize(vertices[0], 1);
+            resize(vertices[length(vertices) - 1], 1);
+
+            TGraph g;
+
+            vertices[0][0] = addVertex(g);
+            vertices[length(vertices) - 1][0] = addVertex(g);
+
+            for (unsigned i = 0; i < length(text); ++i)
             {
-                assignProperty(codons, vertices[i + 1][j], _table.table[ordValue(text[i])][j]);
-                for (unsigned k = 0; k < length(vertices[i]); ++k)
+                resize(vertices[i + 1], length(_table.table[ordValue(text[i])]));
+                for (unsigned j = 0; j < length(vertices[i + 1]); ++j)
+                    vertices[i + 1][j] = addVertex(g);
+            }
+
+
+            resizeVertexMap(g, codons);
+            assignProperty(codons, vertices[0][0], "start");
+            assignProperty(codons, vertices[length(vertices) - 1][0], "end");
+            for (unsigned i = 0; i < length(text); ++i)
+            {
+                for (unsigned j = 0; j < length(vertices[i + 1]); ++j)
                 {
-                    if (i == 0)
-                        addEdge(g, vertices[i][k], vertices[i+1][j], 0.0);
-                    else
+                    assignProperty(codons, vertices[i + 1][j], _table.table[ordValue(text[i])][j]);
+                    for (unsigned k = 0; k < length(vertices[i]); ++k)
                     {
-                        addEdge(g, vertices[i][k], vertices[i+1][j], transitionProb[hashCodon(getProperty(codons, vertices[i][k]))][hashCodon(getProperty(codons,vertices[i+1][j]))]);
-                    }
-                }
-            }
-        }
-
-        for (unsigned i = 0; i < length(vertices[length(text)]) ; ++i)
-            addEdge(g, vertices[length(text)][i], vertices[length(text) + 1][0], 0.0);
-
-        // Run Dijkstra's algorithm from vertex 0.
-        String<unsigned> predMap;
-        String<double> distMap;
-        InternalMap<TCargo> cargoMap;
-        bellmanFordAlgorithm(g, 0, cargoMap, predMap, distMap);
-
-        // Print results to stdout.
-        std::cout << "The computed sequence is: \n";
-        _printPath(g,predMap,(TVertexDescriptor) 0, vertices[length(vertices) - 1][0], codons);
-        std::cout << std::endl;
-
-        std::cout << "The score is: " << distMap[1] / (double)(length(text) - 1) << std::endl;
-    */
-
-        try {
-
-            std::cout << "====================== Starting with: ";
-            std::cout << id;
-            std::cout << " ======================" << std::endl;
-
-            GRBEnv env = GRBEnv();
-
-            GRBModel model = GRBModel(env);
-            //setIntFeasTol(0.000000001);
-    //        model.getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-9); // C++
-
-            // Create variables
-
-            StringSet<String<GRBVar> > grbVarsColumns;
-            StringSet<String<GRBVar> > grbVarsRows;
-            StringSet<String<unsigned> > ids;
-
-            resize(grbVarsColumns, length(seq) / 3);
-            resize(ids, length(seq) / 3);
-            resize(grbVarsRows,length(seq) / 3);
-            GRBVar temp;
-            for (unsigned i = 0; i < length(seq); i += 3)
-            {
-                for (unsigned j = 0; j < length(seq); j += 3)
-                {
-                    if ( ( (i == j) || (infix(seq, i, i + 3) != infix(seq, j, j + 3) ) ) && isSameAS(infix(seq, i, i + 3), infix(seq, j, j+ 3)))
-                    {
-                        temp = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
-                        appendValue(grbVarsColumns[i/3], temp);
-                        appendValue(ids[i/3], j);
-                        appendValue(grbVarsRows[j / 3], temp);
-                    }
-                }
-            }
-
-            StringSet<String<GRBVar> > grbVarsEdges;
-            resize(grbVarsEdges, length(ids) - 1);
-            for (unsigned i = 0; i < length(grbVarsEdges); ++i)
-            {
-                for (unsigned j = 0; j < length(ids[i]); ++j)
-                    for (unsigned k = 0; k < length(ids[i + 1]); ++k)
-                        appendValue(grbVarsEdges[i], model.addVar(0.0, 1.0, 0.0, GRB_BINARY));
-            }
-
-            // Integrate new variables
-            //model.getEnv().set("IntFeasTol", 1e-9);
-            model.update();
-
-            if (!options.objective)
-                model.setObjective(objective(transitionProb,grbVarsEdges, ids, seq), GRB_MINIMIZE);
-            else 
-                model.setObjective(objective(transitionProb,grbVarsEdges, ids, seq), GRB_MAXIMIZE);
-
-            // Add constraint: x + 2 y + 3 z <= 4
-            for (unsigned i = 0; i < length(grbVarsColumns); ++i)
-                model.addConstr(coloumnsConstraints(grbVarsColumns[i]) == 1);
-
-            for (unsigned i = 0; i < length(grbVarsRows); ++i)
-                model.addConstr(coloumnsConstraints(grbVarsRows[i]) == 1);
-
-            for (unsigned i = 0; i < length(grbVarsEdges); ++i)
-                edgeConstraints(model, grbVarsColumns, grbVarsEdges, i, true);
-
-            for (unsigned i = 0; i < length(grbVarsEdges); ++i)
-                edgeConstraints(model, grbVarsColumns, grbVarsEdges, i + 1, false);
-
-            for (unsigned i = 0; i < length(grbVarsEdges); ++i)
-                model.addConstr(coloumnsConstraints(grbVarsEdges[i]) == 1);
-
-
-            // Optimize model
-            model.optimize();
-
-            std::ostringstream sstream;
-            sstream << model.get(GRB_DoubleAttr_ObjVal) / ((double)length(seq) / 3.0 - 1.0);
-
-            append(outStringObjective, id);
-            append(outStringObjective, "\t:\t");
-            append(outStringObjective, sstream.str());
-            append(outStringObjective, "\n");
-
-            cout << "Obj: " << model.get(GRB_DoubleAttr_ObjVal) / ((double)length(seq) / 3.0 - 1.0) << endl;
-
-            appendValue(outString, '>');
-            append(outString, id);
-            appendValue(outString, '\n');
-
-            // output
-            for (unsigned i = 0; i < length(grbVarsColumns) - 1; ++i)
-                for (unsigned j = 0; j < length(grbVarsColumns[i]); ++j)
-                    {
-                        if (grbVarsColumns[i][j].get(GRB_DoubleAttr_X) != 0)
+                        if (i == 0)
+                            addEdge(g, vertices[i][k], vertices[i+1][j], 0.0);
+                        else
                         {
-                            append(outString, infix(seq, ids[i][j], ids[i][j] + 3));
+                            addEdge(g, vertices[i][k], vertices[i+1][j], transitionProb[hashCodon(getProperty(codons, vertices[i][k]))][hashCodon(getProperty(codons,vertices[i+1][j]))]);
                         }
                     }
-
-            // output of last column
-            for (unsigned j = 0; j < length(grbVarsColumns[length(grbVarsColumns) - 1]); ++j)
-            {
-                if (grbVarsColumns[length(grbVarsColumns) - 1][j].get(GRB_DoubleAttr_X) != 0)
-                {
-                    append(outString, infix(seq, ids[length(grbVarsColumns) - 1][j], ids[length(grbVarsColumns) - 1][j] + 3));
                 }
             }
-            appendValue(outString, '\n');
 
-        } catch(GRBException e) 
-        {
-                cout << "Error code = " << e.getErrorCode() << endl;
-                cout << e.getMessage() << endl;
-        } catch(...) 
-        {
-            cout << "Exception during optimization" << endl;
+            for (unsigned i = 0; i < length(vertices[length(text)]) ; ++i)
+                addEdge(g, vertices[length(text)][i], vertices[length(text) + 1][0], 0.0);
+
+            // Run Dijkstra's algorithm from vertex 0.
+            String<unsigned> predMap;
+            String<double> distMap;
+            InternalMap<TCargo> cargoMap;
+            bellmanFordAlgorithm(g, 0, cargoMap, predMap, distMap);
+
+            // Print results to stdout.
+            std::cout << "The computed sequence is: \n";
+            _printPath(g,predMap,(TVertexDescriptor) 0, vertices[length(vertices) - 1][0], codons);
+            std::cout << std::endl;
+
+            std::cout << "The score is: " << distMap[1] / (double)(length(text) - 1) << std::endl;
+        */
+
+            try {
+
+                std::cout << "====================== Starting with: ";
+                std::cout << id;
+                std::cout << " ======================" << std::endl;
+
+                GRBEnv env = GRBEnv();
+
+                GRBModel model = GRBModel(env);
+                //setIntFeasTol(0.000000001);
+        //        model.getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-9); // C++
+
+                // Create variables
+
+                StringSet<String<GRBVar> > grbVarsColumns;
+                StringSet<String<GRBVar> > grbVarsRows;
+                StringSet<String<unsigned> > ids;
+
+                resize(grbVarsColumns, length(seq) / 3);
+                resize(ids, length(seq) / 3);
+                resize(grbVarsRows,length(seq) / 3);
+                GRBVar temp;
+                for (unsigned i = 0; i < length(seq); i += 3)
+                {
+                    for (unsigned j = 0; j < length(seq); j += 3)
+                    {
+                        if ( ( (i == j) || (infix(seq, i, i + 3) != infix(seq, j, j + 3) ) ) && isSameAS(infix(seq, i, i + 3), infix(seq, j, j+ 3)))
+                        {
+                            if (i == j)
+                                temp = model.addVar(0.0, 1.0, 1.0, GRB_BINARY);
+                            else
+                                temp = model.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+                            appendValue(grbVarsColumns[i/3], temp);
+                            appendValue(ids[i/3], j);
+                            appendValue(grbVarsRows[j / 3], temp);
+                        }
+                    }
+                }
+
+                StringSet<String<GRBVar> > grbVarsEdges;
+                resize(grbVarsEdges, length(ids) - 1);
+                for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+                {
+                    for (unsigned j = 0; j < length(ids[i]); ++j)
+                        for (unsigned k = 0; k < length(ids[i + 1]); ++k)
+                            appendValue(grbVarsEdges[i], model.addVar(0.0, 1.0, 0.0, GRB_BINARY));
+                }
+
+                // Integrate new variables
+                //model.getEnv().set("IntFeasTol", 1e-9);
+                model.update();
+
+                if (!options.objective)
+                    model.setObjective(objective(transitionProb,grbVarsEdges, ids, seq), GRB_MINIMIZE);
+                else 
+                    model.setObjective(objective(transitionProb,grbVarsEdges, ids, seq), GRB_MAXIMIZE);
+
+                // Add constraint: x + 2 y + 3 z <= 4
+                for (unsigned i = 0; i < length(grbVarsColumns); ++i)
+                    model.addConstr(coloumnsConstraints(grbVarsColumns[i]) == 1);
+
+                for (unsigned i = 0; i < length(grbVarsRows); ++i)
+                    model.addConstr(coloumnsConstraints(grbVarsRows[i]) == 1);
+
+                for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+                    edgeConstraints(model, grbVarsColumns, grbVarsEdges, i, true);
+
+                for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+                    edgeConstraints(model, grbVarsColumns, grbVarsEdges, i + 1, false);
+
+                for (unsigned i = 0; i < length(grbVarsEdges); ++i)
+                    model.addConstr(coloumnsConstraints(grbVarsEdges[i]) == 1);
+
+
+                // Optimize model
+                model.optimize();
+
+                std::ostringstream sstream;
+                sstream << model.get(GRB_DoubleAttr_ObjVal) / ((double)length(seq) / 3.0 - 1.0);
+
+                append(outStringObjective, id);
+                append(outStringObjective, "\t:\t");
+                append(outStringObjective, sstream.str());
+                append(outStringObjective, "\n");
+
+                cout << "Obj: " << model.get(GRB_DoubleAttr_ObjVal) / ((double)length(seq) / 3.0 - 1.0) << endl;
+
+                appendValue(outString, '>');
+                append(outString, id);
+                appendValue(outString, '\n');
+
+                // output
+                for (unsigned i = 0; i < length(grbVarsColumns) - 1; ++i)
+                    for (unsigned j = 0; j < length(grbVarsColumns[i]); ++j)
+                        {
+                            if (grbVarsColumns[i][j].get(GRB_DoubleAttr_X) != 0)
+                            {
+                                append(outString, infix(seq, ids[i][j], ids[i][j] + 3));
+                            }
+                        }
+
+                // output of last column
+                for (unsigned j = 0; j < length(grbVarsColumns[length(grbVarsColumns) - 1]); ++j)
+                {
+                    if (grbVarsColumns[length(grbVarsColumns) - 1][j].get(GRB_DoubleAttr_X) != 0)
+                    {
+                        append(outString, infix(seq, ids[length(grbVarsColumns) - 1][j], ids[length(grbVarsColumns) - 1][j] + 3));
+                    }
+                }
+                appendValue(outString, '\n');
+
+            } catch(GRBException e) 
+            {
+                    cout << "Error code = " << e.getErrorCode() << endl;
+                    cout << e.getMessage() << endl;
+            } catch(...) 
+            {
+                cout << "Exception during optimization" << endl;
+            }
         }
     }
 

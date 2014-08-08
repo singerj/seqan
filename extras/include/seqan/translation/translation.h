@@ -245,7 +245,7 @@ _translateImplLoop(StringSet<String<AminoAcid, TSpec1>, TSpec2> & target,
     #ifndef SEQAN_TRANSLATION_NO_PARALLEL
     SEQAN_OMP_PRAGMA(parallel for schedule(dynamic))
     #endif
-    for (unsigned i = 0; i < length(target); ++i)
+    for (int i = 0; i < (int)length(target); ++i)
         _translateString(target[i], source[i], TCode());
 }
 
@@ -265,7 +265,7 @@ _translateImplLoop(StringSet<String<AminoAcid, TSpec1>, TSpec2> & target,
     #ifndef SEQAN_TRANSLATION_NO_PARALLEL
     SEQAN_OMP_PRAGMA(parallel for schedule(dynamic))
     #endif
-    for (unsigned i = 0; i < length(target); ++i)
+    for (int i = 0; i < (int)length(target); ++i)
     {
         if (i % 2)
         {
@@ -292,7 +292,7 @@ _translateImplLoop(StringSet<String<AminoAcid, TSpec1>, TSpec2> & target,
     #ifndef SEQAN_TRANSLATION_NO_PARALLEL
     SEQAN_OMP_PRAGMA(parallel for schedule(dynamic))
     #endif
-    for (unsigned i = 0; i < length(target); ++i)
+    for (int i = 0; i < (int)length(target); ++i)
         _translateString(target[i], suffix(source[i/3], i % 3), TCode());
 }
 
@@ -313,7 +313,7 @@ _translateImplLoop(StringSet<String<AminoAcid, TSpec1>, TSpec2> & target,
     #ifndef SEQAN_TRANSLATION_NO_PARALLEL
     SEQAN_OMP_PRAGMA(parallel for schedule(dynamic))
     #endif
-    for (unsigned i = 0; i < length(target); ++i)
+    for (int i = 0; i < (int)length(target); ++i)
     {
         if (i % 6 > 2)
         {

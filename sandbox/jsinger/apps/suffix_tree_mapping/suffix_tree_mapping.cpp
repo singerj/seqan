@@ -33,6 +33,9 @@
 // ==========================================================================
 
 #define SEQAN_DEBUG_INDEX
+#define SEQAN_DEBUG_INDEX
+#define DEBUG_INDEX
+#define SEQAN_DEBUG
 
 #include <seqan/basic.h>
 #include <seqan/sequence.h>
