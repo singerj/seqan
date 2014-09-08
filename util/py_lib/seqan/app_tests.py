@@ -53,6 +53,10 @@ SUPPRESSIONS = '--suppressions=' + os.path.join(os.path.dirname(__file__), '..',
 VALGRIND_FLAGS = [SUPPRESSIONS] + '--error-exitcode=1 -q --tool=memcheck --leak-check=yes --show-reachable=yes --workaround-gcc296-bugs=yes --num-callers=50 --'.split()
 VALGRIND_PATH = '/usr/bin/valgrind'
 
+class BadResultException(Exception):
+    pass
+
+
 class TestConf(object):
     """Configuration for one tests.
 
@@ -70,10 +74,12 @@ class TestConf(object):
                       if the variable is not None.
       redir_stderr -- optional string that gives the path to redirect stderr to
                       if the variable is not None.
+      check_callback -- callable throwing an exception on erorrs.
     """
 
     def __init__(self, program, args, to_diff=[], name=None,
-                 redir_stdout=None, redir_stderr=None):
+                 redir_stdout=None, redir_stderr=None,
+                 check_callback=None):
         """Constructor, args correspond to attrs."""
         self.program = program
         self.args = args
@@ -85,6 +91,7 @@ class TestConf(object):
             self.valgrind = False
         else:
             self.valgrind = TestConf.valgrind
+        self.check_callback = check_callback
 
     def __str__(self):
         fmt = 'TestConf(%s, %s, %s, %s, %s, %s)'
@@ -287,7 +294,7 @@ def runTest(test_conf):
     for tuple_ in test_conf.to_diff:
         expected_path, result_path = tuple_[:2]
         binary = False
-        transforms = []
+        transforms = [NormalizeLineEndingsTransform()]
         if len(tuple_) >= 3:
             if tuple_[2] == 'md5':
                 binary = True
@@ -295,9 +302,9 @@ def runTest(test_conf):
                 transforms += tuple_[2]
         try:
             if binary:
-                with open(expected_path, 'r') as f:
+                with open(expected_path, 'rb') as f:
                     expected_md5 = md5ForFile(f)
-                with open(result_path, 'r') as f:
+                with open(result_path, 'rb') as f:
                     result_md5 = md5ForFile(f)
                 if expected_md5 == result_md5:
                     continue
@@ -306,11 +313,11 @@ def runTest(test_conf):
                     print >>sys.stderr, 'md5(%s) == %s != %s == md5(%s)' % tpl
                     result = False
             else:
-                with open(expected_path, 'r') as f:
+                with open(expected_path, 'rb') as f:
                     expected_str = f.read()
                 for t in transforms:
                     expected_str = t.apply(expected_str, True)
-                with open(result_path, 'r') as f:
+                with open(result_path, 'rb') as f:
                     result_str = f.read()
                 for t in transforms:
                     result_str = t.apply(result_str, False)
@@ -326,6 +333,16 @@ def runTest(test_conf):
         except Exception, e:
             fmt = 'Error when trying to compare %s to %s: %s ' + str(type(e))
             print >>sys.stderr, fmt % (expected_path, result_path, e)
+            result = False
+    # Call check callable.
+    if test_conf.check_callback:
+        try:
+            test_conf.check_callback()
+        except BadResultException, e:
+            print >>sys.stderr, 'Bad result: ' + str(e)
+            result = False
+        except Exception, e:
+            print >>sys.stderr, 'Error in checker: ' + str(type(e)) + ' ' + str(e)
             result = False
     return result
 
@@ -345,35 +362,48 @@ class ReplaceTransform(object):
         return text.replace(self.needle, self.replacement)
 
 
+class NormalizeLineEndingsTransform(object):
+    """Normalizes line endings to '\n'."""
+
+    def __init__(self, left=True, right=True):
+        self.left = left
+        self.right = right
+
+    def apply(self, text, is_left):
+        if (is_left and not self.left) or (not is_left and not self.right):
+            return text  # Skip if no transform is to be applied.
+        return text.replace('\r\n', '\n')
+
+
 class NormalizeScientificExponentsTransform(object):
-	"""Transformation that normalized scientific notation exponents.
-	
-	On Windows, scientific numbers are printed with an exponent padded to
-	a width of three with zeros, e.g. 1e003 instead of 1e03 as on Unix.
-	
-	This transform normalizes to Unix or Windows.
-	"""
-	
-	def __init__(self, normalize_to_unix=True):
-		self.normalize_to_unix = normalize_to_unix
-	
-	def apply(self, text, is_left):
-		"""Apply the transform."""
-		if self.normalize_to_unix:
-			return re.sub(r'([-+]?(?:[0-9]*\.)?[0-9]+[eE][\-+]?)0([0-9]{2})', r'\1\2', text)
-		else:
-			return re.sub(r'([-+]?(?:[0-9]*\.)?[0-9]+[eE][\-+]?)([0-9]{2})', r'\10\2', text)
+    """Transformation that normalized scientific notation exponents.
+
+    On Windows, scientific numbers are printed with an exponent padded to
+    a width of three with zeros, e.g. 1e003 instead of 1e03 as on Unix.
+
+    This transform normalizes to Unix or Windows.
+    """
+
+    def __init__(self, normalize_to_unix=True):
+        self.normalize_to_unix = normalize_to_unix
+
+    def apply(self, text, is_left):
+        """Apply the transform."""
+        if self.normalize_to_unix:
+            return re.sub(r'([-+]?(?:[0-9]*\.)?[0-9]+[eE][\-+]?)0([0-9]{2})', r'\1\2', text)
+        else:
+            return re.sub(r'([-+]?(?:[0-9]*\.)?[0-9]+[eE][\-+]?)([0-9]{2})', r'\10\2', text)
 
 
 class RegexpReplaceTransform(object):
     """Transformation that applies regular expression replacement."""
-    
+
     def __init__(self, needle, replacement, left=True, right=True):
         self.needle = needle
         self.replacement = replacement
         self.left = left
         self.right = right
-    
+
     def apply(self, text, is_left):
         """Apply the transform."""
         if (is_left and not self.left) or (not is_left and not self.right):
@@ -395,7 +425,7 @@ class UniqueTransform(object):
 
 
 def main(main_func, **kwargs):
-    """Run main_func with the first and second positional parameter.""" 
+    """Run main_func with the first and second positional parameter."""
     parser = optparse.OptionParser("usage: run_tests [options] SOURCE_ROOT_PATH BINARY_ROOT_PATH")
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true')
     parser.add_option('--valgrind', dest='valgrind', action='store_true')
