@@ -68,10 +68,12 @@ struct AppOptions
     CharString outputFileName;
     int numThreads;
     unsigned bufferSize;
+    int minScore;
 
     AppOptions() :
         numThreads(1),
-        bufferSize(100000)
+        bufferSize(100000),
+        minScore(minValue<int>())
     {}
 };
 
@@ -111,6 +113,7 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
 
     addOption(parser, ArgParseOption("th", "threads", "The number of threads to be used.", ArgParseArgument::INTEGER));
     addOption(parser, ArgParseOption("bf", "bufferSize", "The number of hits stored in a buffer before writing them to disk.", ArgParseArgument::INTEGER));
+    addOption(parser, ArgParseOption("s", "minScore", "MinScore of alignment in order to be considered.", ArgParseArgument::INTEGER));
 
     // Add Examples Section.
     addTextSection(parser, "Examples");
@@ -134,49 +137,38 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     getOptionValue(options.outputFileName, parser, "o");
     getOptionValue(options.numThreads, parser, "th");
     getOptionValue(options.bufferSize, parser, "bf");
+    getOptionValue(options.minScore, parser, "s");
 
     return ArgumentParser::PARSE_OK;
 }
 
 template <typename TStream, typename TAlign>
-void write(TStream & stream,
-           TAlign const & align,
+void writeLocal(TStream & stream,
+           TAlign & align,
            String<char> const & patternId,
            String<char> const & refId,
            String<char> & cigar,
-           bool const reverseComplemented)
+           int score)
 {
+    int clipBegin = row(align, 1)._array[0];
+    int clipEnd = length(row(align, 1)) - row(align, 1)._array[length(row(align, 1)._array) - 1];
+    setClippedBeginPosition(row(align, 0), clipBegin);
+    setClippedBeginPosition(row(align, 1), clipBegin);
+    setClippedEndPosition(row(align, 0), clipEnd);
+    setClippedEndPosition(row(align, 1), clipEnd);
     getCigarString(cigar,row(align, 0), row(align, 1), 1000);
-
     stream << patternId << "\t";                                //QNAME
     stream << (unsigned short)0x0002 << "\t";                        //FLAG
     stream << refId << "\t";   //RNAME
-    if (reverseComplemented)
-        stream << 2 * length(source(row(align,1))) / 5;//  + row(align, 1)._array[0] + 1 << "\t";    //POS
-    else
-        stream << row(align, 1)._array[0] + 1 << "\t";    //POS
-    stream << 0 << "\t";                                             //MAPQ
+    stream << row(align, 1)._array[0] + 1 << "\t";    //POS
+    stream << score << "\t";
     stream << cigar << "\t";                                         //CIGAR
     stream << "*" << "\t";                                           //RNEXT
     stream << 0 << "\t";                                             //PNEXT
     stream << 0 << "\t";                                             //TLen
     stream << source(row(align, 1)) << "\t";                                //SEQ
     stream << "*" << "\n";                                           //QUAL
-    //std::cerr << stream.rdbuf() << std::endl;
-    std::cerr << patternId << "\t";                                //QNAME
-    std::cerr << (unsigned short)0x0002 << "\t";                        //FLAG
-    std::cerr << refId << "\t";   //RNAME
-    if (reverseComplemented)
-        std::cerr << 2 * length(source(row(align,0))) / 5  + row(align, 1)._array[0] + 1 << "\t";    //POS
-    else
-        std::cerr << row(align, 1)._array[0] + 1 << "\t";    //POS
-    std::cerr << 0 << "\t";                                             //MAPQ
-    std::cerr << cigar << "\t";                                         //CIGAR
-    std::cerr << "*" << "\t";                                           //RNEXT
-    std::cerr << 0 << "\t";                                             //PNEXT
-    std::cerr << 0 << "\t";                                             //TLen
-    std::cerr << source(row(align, 1)) << "\t";                                //SEQ
-    std::cerr << "*" << "\n";                                           //QUAL
+
 }
 
 // --------------------------------------------------------------------------
@@ -187,7 +179,7 @@ void write(TStream & stream,
 
 int main(int argc, char const ** argv)
 {
-    typedef String<Dna5> TRefSeq;
+    typedef String<Iupac> TRefSeq;
 
     // Parse the command line.
     ArgumentParser parser;
@@ -209,284 +201,122 @@ int main(int argc, char const ** argv)
     // Reference
     SequenceStream seqInRef(toCString(options.refFileName));
     StringSet<String<char> > refIds;
-    StringSet<TRefSeq> refSeqsLeft;
-    readAll(refIds, refSeqsLeft, seqInRef);
+    StringSet<TRefSeq> refSeqs;
+    readAll(refIds, refSeqs, seqInRef);
 
-    StringSet<TRefSeq> refSeqsRight;
-    resize(refSeqsRight, length(refSeqsLeft));
-    for (unsigned i = 0; i < length(refSeqsLeft); ++i)
-    {
-        stream << "@SQ\tSN:" << refIds[i] << "\tLN:" << length(refSeqsLeft[i]) << "\n";
-        refSeqsRight[i] = suffix(refSeqsLeft[i], 2 * length(refSeqsLeft[i]) / 5);
-        resize(refSeqsLeft[i], 3 * length(refSeqsLeft[i]) / 5);
-    }
-
-    // ReverseComplement References
-    StringSet<TRefSeq> refSeqsLeftComp;
-    StringSet<TRefSeq> refSeqsRightComp;
-    resize(refSeqsLeftComp, length(refSeqsLeft));
-    resize(refSeqsRightComp, length(refSeqsRight));
-    for (unsigned i = 0; i < length(refSeqsLeft); ++i)
-    {
-        refSeqsLeftComp[i] = refSeqsLeft[i];
-        reverseComplement(refSeqsLeftComp[i]);
-        refSeqsRightComp[i] = refSeqsRight[i];
-        reverseComplement(refSeqsRightComp[i]);
-    }
+    for (unsigned i = 0; i < length(refSeqs); ++i)
+        stream << "@SQ\tSN:" << refIds[i] << "\tLN:" << length(refSeqs[i]) << "\n";
+    stream.close();
 
     // Preparing the align Objects
-    // Left side
-    String<Align<TRefSeq> > alignObjsLeft;
-    resize(alignObjsLeft, length(refSeqsLeft));
-    for (unsigned i = 0; i < length(refSeqsLeft); ++i)
+    String<Align<TRefSeq> > alignObjs, alignObjsRevComp;
+    resize(alignObjs, length(refSeqs));
+    resize(alignObjsRevComp, length(refSeqs));
+    for (unsigned i = 0; i < length(refSeqs); ++i)
     {
-        resize(rows(alignObjsLeft[i]), 2);
-        assignSource(row(alignObjsLeft[i], 0), refSeqsLeft[i]);
+        resize(rows(alignObjs[i]), 2);
+        resize(rows(alignObjsRevComp[i]), 2);
+        assignSource(row(alignObjs[i], 0), refSeqs[i]);
+        assignSource(row(alignObjsRevComp[i], 0), refSeqs[i]);
     }
-    /*
-    String<Align<TRefSeq> > alignObjsLeftComp;
-    resize(alignObjsLeftComp, length(refSeqsLeftComp));
-    for (unsigned i = 0; i < length(refSeqsLeftComp); ++i)
-    {
-        resize(rows(alignObjsLeftComp[i]), 2);
-        assignSource(row(alignObjsLeftComp[i], 0), refSeqsLeftComp[i]);
-    }
-    */
-    // Right side
-    String<Align<TRefSeq> > alignObjsRight;
-    resize(alignObjsRight, length(refSeqsRight));
-    for (unsigned i = 0; i < length(refSeqsRight); ++i)
-    {
-        resize(rows(alignObjsRight[i]), 2);
-        assignSource(row(alignObjsRight[i], 0), refSeqsRight[i]);
-    }
-    /*
-    String<Align<TRefSeq> > alignObjsRightComp;
-    resize(alignObjsRightComp, length(refSeqsRightComp));
-    for (unsigned i = 0; i < length(refSeqsRightComp); ++i)
-    {
-        resize(rows(alignObjsRightComp[i]), 2);
-        assignSource(row(alignObjsRightComp[i], 0), refSeqsRightComp[i]);
-    }
-    */
 
-    // Positioning Segment
-    TRefSeq posSegmentLeft = prefix(refSeqsLeft[0], 20);
-    TRefSeq posSegmentLeftComp = posSegmentLeft;
-    reverseComplement(posSegmentLeftComp);
-    //TRefSeq posSegmentLeftComp = suffix(refSeqsLeftComp[0], length(refSeqsLeftComp[0]) - 20);
-    TRefSeq posSegmentRight = suffix(refSeqsRight[0], length(refSeqsRight[0]) - 20);
-    TRefSeq posSegmentRightComp = posSegmentRight;
-    reverseComplement(posSegmentRightComp);
-    //TRefSeq posSegmentRightComp = prefix(refSeqsRightComp[0], 20);
-
-
-    // Pattern
-    StringSet<CharString> patternIds;
-    StringSet<String<Dna5> > patternSeqs;
-
-    // Cigar String
-    CharString cigar;
+    
 
     // Alignment helpers
-    int maxScore, maxId;
-    Ednafull scoringScheme(-2, -1);
+    int maxScore, maxScoreRevComp, maxId, maxIdRevComp;
+    Ednafull scoringScheme(-1, -20);
     AlignConfig<true, false, false, true> alignConfig;
 
     for (unsigned fileCounter = 0; fileCounter < length(options.patternFileNames); ++fileCounter)
     {
-        clear(patternIds);
-        clear(patternSeqs);
-
-        // Reading the pattern
         SequenceStream seqInPattern(toCString(options.patternFileNames[fileCounter]));
-        SEQAN_OMP_PRAGMA(critical (read_chunk))
+        // This is the parallelization starting point
+        SEQAN_OMP_PRAGMA(parallel num_threads(options.numThreads))
+        for (; ;)
         {
-            if (!atEnd(seqInPattern))
+            // Pattern
+            StringSet<CharString> patternIds;
+            StringSet<String<Dna5> > patternSeqs;
+            String<Dna5> revComPatternSeq;
+
+            // Cigar String
+            CharString cigar;
+
+            std::ostringstream localStream;
+            // Reading the pattern
+            SEQAN_OMP_PRAGMA(critical (read_chunk))
             {
-                if(readBatch(patternIds, patternSeqs, seqInPattern, options.bufferSize) != 0)
+                if (!atEnd(seqInPattern))
                 {
-                    std::cout << "ERROR: Could not read samples!\n";
+                    if(readBatch(patternIds, patternSeqs, seqInPattern, options.bufferSize) != 0)
+                    {
+                        std::cout << "ERROR: Could not read samples!\n";
+                    }
                 }
+
+            }
+
+            if (length(patternIds) == 0)
+            {
+                std::cerr << "TEST" << std::endl;
+                break;
+            }
+
+           // int lDiag = -30;
+           // int uDiag = 30;
+            for (unsigned i = 0; i < length(patternSeqs); ++i)
+            {
+                // Determine if right or left aligned
+                String<Dna5> left= prefix(patternSeqs[i], 20);
+                String<Dna5> right = suffix(patternSeqs[i], length(patternSeqs[i]) - 20);
+
+                maxScore = minValue<int>();
+                maxId = -1;
+                for (unsigned j = 0; j < length(alignObjs); ++j)
+                {
+                    assignSource(row(alignObjs[j], 1), patternSeqs[i]);
+                    int result = globalAlignment(alignObjs[j], scoringScheme, alignConfig, maxScore);//, lDiag, uDiag);
+                    if (maxScore < result)
+                    {
+                        maxScore = result;
+                        maxId = j;
+                    }
+                }
+                revComPatternSeq = patternSeqs[i];
+                reverseComplement(revComPatternSeq);
+                maxScoreRevComp = minValue<int>();
+                maxIdRevComp = -1;
+                for (unsigned j = 0; j < length(alignObjsRevComp); ++j)
+                {
+                    assignSource(row(alignObjsRevComp[j], 1), revComPatternSeq);
+                    int result = globalAlignment(alignObjsRevComp[j], scoringScheme, alignConfig, maxScoreRevComp);//, lDiag, uDiag);
+                    if (maxScoreRevComp < result)
+                    {
+                        maxScoreRevComp = result;
+                        maxIdRevComp = j;
+                    }
+                }
+                if (maxScore > maxScoreRevComp)
+                {
+                    int normScore = maxScore / (length(revComPatternSeq) * 5.0) * 255.0;
+                    if (normScore > options.minScore)
+                        writeLocal(localStream, alignObjs[maxId], patternIds[i], refIds[maxId], cigar, normScore);
+                }
+                else
+                {
+                    int normScore = maxScoreRevComp / (length(revComPatternSeq) * 5.0) * 255.0;
+                    if(normScore > options.minScore)
+                        writeLocal(localStream, alignObjsRevComp[maxIdRevComp], patternIds[i], refIds[maxIdRevComp], cigar, normScore);
+                }
+            }
+            SEQAN_OMP_PRAGMA(critical (write_chunk))
+            {
+                std::ofstream stream(toCString(options.outputFileName), std::ios::out | std::ios::app);
+                stream << localStream.str();
+                stream.close();
             }
         }
-
-       // int lDiag = -30;
-       // int uDiag = 30;
-        for (unsigned i = 0; i < length(patternSeqs); ++i)
-        {
-
-            // Determine if right or left aligned
-            String<Dna5> left= prefix(patternSeqs[i], 20);
-            String<Dna5> right = suffix(patternSeqs[i], length(patternSeqs[i]) - 20);
-
-            maxId = 0;
-            maxScore = globalAlignmentScore(posSegmentLeft, left, MyersBitVector());
-            //std::cerr << "posSegmentLeft: " << posSegmentLeft << std::endl;
-            //std::cerr << "posSegmentLeft: " << posSegmentLeftComp << std::endl;
-            //std::cerr << "posSegmentLeft: " << posSegmentRight << std::endl;
-            //std::cerr << "posSegmentLeft: " << posSegmentRightComp << std::endl;
-            int tempScore = globalAlignmentScore(posSegmentLeftComp, right, MyersBitVector());
-            if (tempScore > maxScore)
-            {
-                maxScore = tempScore;
-                maxId = 1;
-            }
-            tempScore = globalAlignmentScore(posSegmentRight, right, MyersBitVector());
-            if (tempScore > maxScore)
-            {
-                maxScore = tempScore;
-                maxId = 2;
-            }
-            tempScore = globalAlignmentScore(posSegmentRightComp, left, MyersBitVector());
-            if (tempScore > maxScore)
-            {
-                maxScore = tempScore;
-                maxId = 3;
-            }
-
-
-            switch (maxId) 
-            {
-                case(0) :
-                {
-                    maxScore = minValue<int>();
-                    maxId = -1;
-                    for (unsigned j = 0; j < length(alignObjsLeft); ++j)
-                    {
-                        assignSource(row(alignObjsLeft[j], 1), patternSeqs[i]);
-                        int result = globalAlignment(alignObjsLeft[j], scoringScheme, alignConfig);//, lDiag, uDiag);
-                        if (maxScore < result)
-                        {
-                            maxScore = result;
-                            maxId = j;
-                        }
-                    }
-                    write(stream, alignObjsLeft[maxId], patternIds[i], refIds[maxId], cigar, false);
-                    break;
-                }
-                case(1) :
-                {
-                    maxScore = minValue<int>();
-                    maxId = -1;
-                    for (unsigned j = 0; j < length(alignObjsLeft); ++j)
-                    {
-                        reverseComplement(patternSeqs[i]);
-                        assignSource(row(alignObjsLeft[j], 1), patternSeqs[i]);
-                        int result = globalAlignment(alignObjsLeft[j], scoringScheme, alignConfig);//, lDiag, uDiag);
-                        if (maxScore < result)
-                        {
-                            maxScore = result;
-                            maxId = j;
-                        }
-                    }
-                    write(stream, alignObjsLeft[maxId], patternIds[i], refIds[maxId], cigar, true);
-                    break;
-                }
-                case(2) :
-                {
-                    //std::cerr << source(row(alignObjsRight[j], 0)) << std::endl;
-                        //char c;
-                        //std::cin >> c;
-                        //std::cerr << std::endl;
-                    maxScore = minValue<int>();
-                    maxId = -1;
-                    for (unsigned j = 0; j < length(alignObjsRight); ++j)
-                    {
-                        assignSource(row(alignObjsRight[j], 1), patternSeqs[i]);
-                        int result = globalAlignment(alignObjsRight[j], scoringScheme, alignConfig);//, lDiag, uDiag);
-                        if (maxScore < result)
-                        {
-                            maxScore = result;
-                            maxId = j;
-                        }
-                    }
-                    write(stream, alignObjsRight[maxId], patternIds[i], refIds[maxId], cigar, false);
-                    break;
-                }
-                case(3) :
-                {
-                    maxScore = minValue<int>();
-                    maxId = -1;
-                    for (unsigned j = 0; j < length(alignObjsRight); ++j)
-                    {
-                        reverseComplement(patternSeqs[i]);
-                        assignSource(row(alignObjsRight[j], 1), patternSeqs[i]);
-                        int result = globalAlignment(alignObjsRight[j], scoringScheme, alignConfig);//, lDiag, uDiag);
-                        if (maxScore < result)
-                        {
-                            maxScore = result;
-                            maxId = j;
-                        }
-                    }
-                    std::cerr << source(row(alignObjsRight[maxId], 0)) << std::endl;
-                    std::cerr << patternSeqs[i] << std::endl;
-                    std::cerr << maxScore << std::endl << alignObjsRight[maxId] << std::endl;
-                    write(stream, alignObjsRight[maxId], patternIds[i], refIds[maxId], cigar, true);
-                    char c;
-                    //std::cin >> c;
-                    std::cerr << std::endl;
-                    break;
-                }
-                default :
-                    std::cerr << "A mistake must have happend!" << std::endl;
-            }
-        }
-        stream.close();
     }
-
-    /*
-    Dna5String seqH = "CGAAATT";
-    Dna5String seqV = "AAATT";
-
-    Align<Dna5String> align;
-    resize(rows(align), 2);
-    assignSource(row(align, 0), seqH);
-    assignSource(row(align, 1), seqV);
-
-    Score<int, Simple> scoringScheme(2, -1, -2);
-    AlignConfig<> alignConfig;
-
-    int lDiag = -2;
-    int uDiag = 2;
-
-    int result = globalAlignment(align, scoringScheme, alignConfig, lDiag, uDiag);
-
-    std::cout << "Score: " << result << "\n";
-    std::cout << "The resulting alignment is\n"
-              << align << "\n";
-
-    //WRITING
-    record.flag = 0;
-
-
-    record._qID = MaxValue<__uint32>::VALUE;
-    record.rID = BamAlignmentRecord::INVALID_REFID;
-    record.beginPos = BamAlignmentRecord::INVALID_POS;
-    record.mapQ = 255;
-    record.bin = 0;
-    clear(record.cigar);
-    record.rNextId = BamAlignmentRecord::INVALID_REFID;
-    record.pNext = BamAlignmentRecord::INVALID_POS;
-    record.tLen = BamAlignmentRecord::INVALID_LEN;
-    clear(record.seq);
-    clear(record.qual);
-    clear(record.tags);
-
-    std::cout << length(row(align, 0)) << std::endl;
-    for (int i =0; i < length(row(align, 0)); ++i)
-        std::cout << isGap(row(align, 0), i);
-    std::cout << std::endl;
-
-    for (int i =0; i < length(row(align, 0)._array); ++i)
-        std::cout << row(align, 0)._array[i] << " ";
-    std::cout << std::endl;
-
-    for (int i =0; i < length(row(align, 1)._array); ++i)
-        std::cout << row(align, 1)._array[i] << " ";
-    std::cout << std::endl;
-*/
-
 
     return 0;
 }

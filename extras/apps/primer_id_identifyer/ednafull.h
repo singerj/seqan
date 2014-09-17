@@ -29,7 +29,7 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Author: Jochen Singer <jochen.singer@essb.ethz.ch>
+// Author: Jochen Singer <jochen.singer@bsse.ethz.ch>
 // ==========================================================================
 
 namespace seqan
@@ -51,14 +51,8 @@ struct ScoringMatrixData_<int, Iupac, ScoreSpecEdnafull> {
     };
 
     static inline int const * getData() {
-        SEQAN_CHECKPOINT;
-        // The matrix data, ordered by amino acid alphabet.
-        // Matrix made by matblas from blosum30.iij
-        // * column uses minimum score
-        // BLOSUM Clustered Scoring Matrix in 1/5 Bit Units
-        // Blocks Database = /data/blocks_5.0/blocks.dat
-        // Cluster Percentage: >= 30
-        // Entropy =   0.1424, Expected =  -0.1074
+        //SEQAN_CHECKPOINT;
+        //Entropy =   0.1424, Expected =  -0.1074
         static int const _data[TAB_SIZE] = {
             5, 5, -4, 1, -4, 1, -4, -1, -4, 1, -4, -1, -4, -1, -4, -2,
             5, 5, -4, 1, -4, 1, -4, -1, -4, 1, -4, -1, -4, -1, -4, -2,
