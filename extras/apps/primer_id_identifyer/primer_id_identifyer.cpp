@@ -208,17 +208,7 @@ int main(int argc, char const ** argv)
         stream << "@SQ\tSN:" << refIds[i] << "\tLN:" << length(refSeqs[i]) << "\n";
     stream.close();
 
-    // Preparing the align Objects
-    String<Align<TRefSeq> > alignObjs, alignObjsRevComp;
-    resize(alignObjs, length(refSeqs));
-    resize(alignObjsRevComp, length(refSeqs));
-    for (unsigned i = 0; i < length(refSeqs); ++i)
-    {
-        resize(rows(alignObjs[i]), 2);
-        resize(rows(alignObjsRevComp[i]), 2);
-        assignSource(row(alignObjs[i], 0), refSeqs[i]);
-        assignSource(row(alignObjsRevComp[i], 0), refSeqs[i]);
-    }
+    
 
     
 
@@ -234,6 +224,18 @@ int main(int argc, char const ** argv)
         SEQAN_OMP_PRAGMA(parallel num_threads(options.numThreads))
         for (; ;)
         {
+            // Preparing the align Objects
+            String<Align<TRefSeq> > alignObjs, alignObjsRevComp;
+            resize(alignObjs, length(refSeqs));
+            resize(alignObjsRevComp, length(refSeqs));
+            for (unsigned i = 0; i < length(refSeqs); ++i)
+            {
+                resize(rows(alignObjs[i]), 2);
+                resize(rows(alignObjsRevComp[i]), 2);
+                assignSource(row(alignObjs[i], 0), refSeqs[i]);
+                assignSource(row(alignObjsRevComp[i], 0), refSeqs[i]);
+            }
+
             // Pattern
             StringSet<CharString> patternIds;
             StringSet<String<Dna5> > patternSeqs;
@@ -258,7 +260,7 @@ int main(int argc, char const ** argv)
 
             if (length(patternIds) == 0)
             {
-                std::cerr << "TEST" << std::endl;
+                //std::cerr << "TEST" << std::endl;
                 break;
             }
 
@@ -320,4 +322,5 @@ int main(int argc, char const ** argv)
 
     return 0;
 }
+
 
