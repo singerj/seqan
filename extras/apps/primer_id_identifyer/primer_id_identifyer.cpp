@@ -208,18 +208,17 @@ int main(int argc, char const ** argv)
         stream << "@SQ\tSN:" << refIds[i] << "\tLN:" << length(refSeqs[i]) << "\n";
     stream.close();
 
-    
-
-    
 
     // Alignment helpers
-    int maxScore, maxScoreRevComp, maxId, maxIdRevComp;
+    
     Ednafull scoringScheme(-1, -20);
     AlignConfig<true, false, false, true> alignConfig;
 
+    unsigned counter = 0;
     for (unsigned fileCounter = 0; fileCounter < length(options.patternFileNames); ++fileCounter)
     {
         SequenceStream seqInPattern(toCString(options.patternFileNames[fileCounter]));
+
         // This is the parallelization starting point
         SEQAN_OMP_PRAGMA(parallel num_threads(options.numThreads))
         for (; ;)
@@ -228,6 +227,9 @@ int main(int argc, char const ** argv)
             String<Align<TRefSeq> > alignObjs, alignObjsRevComp;
             resize(alignObjs, length(refSeqs));
             resize(alignObjsRevComp, length(refSeqs));
+
+            int maxScore, maxScoreRevComp, maxId, maxIdRevComp;
+
             for (unsigned i = 0; i < length(refSeqs); ++i)
             {
                 resize(rows(alignObjs[i]), 2);
@@ -255,7 +257,7 @@ int main(int argc, char const ** argv)
                         std::cout << "ERROR: Could not read samples!\n";
                     }
                 }
-
+                counter++;
             }
 
             if (length(patternIds) == 0)
@@ -312,7 +314,11 @@ int main(int argc, char const ** argv)
                 }
             }
             SEQAN_OMP_PRAGMA(critical (write_chunk))
-            {
+            {   //std::ostringstream testStream;
+                //testStream << counter;
+                //String<char> test = options.outputFileName;
+                //append(test, testStream.str());
+                //std::cerr << test << std::endl;
                 std::ofstream stream(toCString(options.outputFileName), std::ios::out | std::ios::app);
                 stream << localStream.str();
                 stream.close();
