@@ -29,8 +29,6 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Author: Your Name <your.email@example.net>
-// ==========================================================================
 
 #define SEQAN_DEBUG_INDEX
 #define SEQAN_DEBUG_INDEX
@@ -66,21 +64,18 @@ using namespace seqan;
 // --------------------------------------------------------------------------
 
 // This struct stores the options from the command line.
-//
-// You might want to rename this to reflect the name of your app.
 
 struct AppOptions
 {
-    // The first (and only) argument of the program is stored here.
     CharString sampleFileName;
     CharString dbFileName;
     CharString outputFileName;
     CharString outputIndexName;
     CharString inputType;
     int numThreads;
-    unsigned bufferSize;
+    unsigned bufferSize; // #reads read at a time
     bool onlyStoreIndex;
-    unsigned geneticCode;
+    unsigned geneticCode; // which translation code to use
 
     AppOptions() :
         numThreads(1),
@@ -104,18 +99,17 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     // Setup ArgumentParser.
     seqan::ArgumentParser parser("suffix_tree_mapping");
     // Set short description, version, and date.
-    setShortDescription(parser, "Put a Short Description Here");
+    setShortDescription(parser, "This porgram searches for exact query matches using a suffix tree index.");
     setVersion(parser, "0.1");
-    setDate(parser, "July 2012");
+    setDate(parser, "July 2014");
 
     // Define usage line and long description.
     addUsageLine(parser, "[\\fIOPTIONS\\fP] \"\\fITEXT\\fP\"");
     addDescription(parser, "This is the application skelleton and you should modify this string.");
     
-    addUsageLine(parser, "\\fB-is\\fP \\fISAMPLEFILE\\fP \\fB-ir\\fP \\fIREFERENCE\\fP \\fB-t\\fP \\fITYPE [dna, peptide]\\fP \\fB-o\\fP \\fIOUTFILE\\fP");
+    addUsageLine(parser, "[\\fIOPTIONS\\fP] \\fB-is\\fP \\fISAMPLEFILE\\fP \\fB-ir\\fP \\fIREFERENCE\\fP \\fB-t\\fP \\fITYPE [dna, peptide]\\fP \\fB-o\\fP \\fIOUTFILE\\fP");
     addDescription(parser, "This program determines the locations of the input queries in the reference.");
 
-     // We require three arguments.
     addOption(parser, ArgParseOption("is", "inputSample", "Name of the multi-FASTA input.", ArgParseArgument::INPUTFILE, "IN"));
     setRequired(parser, "is");
     setValidValues(parser, "is", "fasta fa fna");
@@ -136,15 +130,10 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     addOption(parser, seqan::ArgParseOption("sO", "storeOnly", "Stop after storing the index."));
 
     addOption(parser, ArgParseOption("th", "threads", "The number of threads to be used.", ArgParseArgument::INTEGER));
-    addOption(parser, ArgParseOption("bf", "bufferSize", "The number of hits stored in a buffer before writing them to disk.", ArgParseArgument::INTEGER));
+    addOption(parser, ArgParseOption("bf", "bufferSize", "The number of reads stored in a buffer before writing them to disk.", ArgParseArgument::INTEGER));
     ArgParseOption gcOption("gc", "geneticCode", "The genetic code to be used for translation.", ArgParseArgument::INTEGER);
     setHelpText(gcOption, "There are several different genetic codes available taken from NCBI: 0: Canonical, 1: VertMitochondrial, 2: YeastMitochondrial, 3: MoldMitochondrial, 4: InvertMitochondrial, 5: Ciliate, 6: FlatwormMitochondrial, 7: Euplotid, 8: Prokaryote, 9: AltYeast, 10: AscidianMitochondrial, 11: AltFlatwormMitochondrial, 12: Blepherisma, 13: ChlorophyceanMitochondrial, 14: TrematodeMitochondrial, 15: ScenedesmusMitochondrial, 16: ThraustochytriumMitochondrial, 17: PterobranchiaMitochondrial, 18: Gracilibacteria");
     addOption(parser, gcOption);
-
-    // Add Examples Section.
-    addTextSection(parser, "Examples");
-    addListItem(parser, "\\fBsuffix_tree_mapping\\fP \\fB-v\\fP \\fItext\\fP",
-                "Call with \\fITEXT\\fP set to \"text\" with verbose output.");
 
     // Parse command line.
     seqan::ArgumentParser::ParseResult res = seqan::parse(parser, argc, argv);
@@ -435,6 +424,7 @@ int main(int argc, char const ** argv)
                 }
             }
         }
+        SEQAN_OMP_PRAGMA(critical (write_chunk))
         for (unsigned j = 0; j < length(records); ++j)
         {
             writeRecord(fout, records[j], Gff());
