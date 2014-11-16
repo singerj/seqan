@@ -137,19 +137,15 @@ public:
 
 //____________________________________________________________________________
 
-	Pattern() {
-	}
+	Pattern() : data_keywordIndex(0), data_needleLength(0)
+	{}
 
 	template <typename TNeedle2>
-	Pattern(TNeedle2 const & ndl)
+	Pattern(TNeedle2 const & ndl) : data_keywordIndex(0), data_needleLength(0)
 	{
-		SEQAN_CHECKPOINT
 		setHost(*this, ndl);
 	}
 
-	~Pattern() {
-		SEQAN_CHECKPOINT
-	}
 //____________________________________________________________________________
 };
 
@@ -192,8 +188,8 @@ _createAcTrie(Pattern<TNeedle, AhoCorasick> & me)
 	// Create parent map
 	String<TVertexDescriptor> parentMap;
 	String<TAlphabet> parentCharMap;
-	resizeVertexMap(me.data_graph,parentMap);
-	resizeVertexMap(me.data_graph,parentCharMap);
+	resizeVertexMap(parentMap, me.data_graph);
+	resizeVertexMap(parentCharMap, me.data_graph);
 	for(TPosition i = 0;i<length(parentMap);++i) {
 		assignProperty(parentMap, i, nilVal);
 	}
@@ -206,7 +202,7 @@ _createAcTrie(Pattern<TNeedle, AhoCorasick> & me)
 
 	// Build AC
 	TVertexDescriptor root = getRoot(me.data_graph);
-	resizeVertexMap(me.data_graph,me.data_supplyMap);
+	resizeVertexMap(me.data_supplyMap, me.data_graph);
 	assignProperty(me.data_supplyMap, root, nilVal);
 
 	// Bfs Traversal
@@ -261,7 +257,7 @@ void setHost (Pattern<TNeedle, AhoCorasick> & me, TNeedle2 const & needle) {
 	//_createTrieNodeAttributes(me.data_graph, me.data_terminalStateMap, nodeMap);
 	//String<String<char> > edgeMap;
 	//_createEdgeAttributes(me.data_graph,edgeMap);
-	//write(strm,me.data_graph,nodeMap,edgeMap,DotDrawing());
+	//writeRecords(strm,me.data_graph,nodeMap,edgeMap,DotDrawing());
 	//strm.close();
 	// Supply links
 	//for(unsigned int i=0;i<length(me.data_supplyMap);++i) {

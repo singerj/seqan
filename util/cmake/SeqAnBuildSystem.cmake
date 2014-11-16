@@ -67,9 +67,11 @@ include (SeqAnUsabilityAnalyzer)
 # ---------------------------------------------------------------------------
 
 # We need the /bigobj switch on windows (for 64 bit builds only actually).
-# Set target system to be Windows XP and later.
+# Set target system to be Windows Vista and later.
 if (MSVC)
-  add_definitions (/bigobj /D_WIN32_WINNT=0x0501 /DWINVER=0x0501)
+  add_definitions (/bigobj /D_WIN32_WINNT=0x0600 /DWINVER=0x0600)
+elseif (MINGW)
+  add_definitions (-D_WIN32_WINNT=0x0600 -DWINVER=0x0600)
 endif (MSVC)
 
 # ---------------------------------------------------------------------------
@@ -80,7 +82,9 @@ endif (MSVC)
 # ---------------------------------------------------------------------------
 
 if (MINGW)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=i586")
+	if ("${CMAKE_SIZEOF_VOID_P}" EQUAL "4")
+	    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=i586")
+	endif ("${CMAKE_SIZEOF_VOID_P}" EQUAL "4")
 endif (MINGW)
 
 # ---------------------------------------------------------------------------
@@ -189,9 +193,9 @@ macro (seqan_build_system_init)
 
     if (("${SEQAN_BUILD_SYSTEM}" STREQUAL "SEQAN_RELEASE") OR
         ("${SEQAN_BUILD_SYSTEM}" STREQUAL "SEQAN_RELEASE_LIBRARY"))
-        # Install SeqAn README and LICENSE files.
+        # Install SeqAn README.rst and LICENSE files.
         install (FILES LICENSE
-                       README
+                       README.rst
                  DESTINATION share/doc/seqan)
     endif ()
 
@@ -246,6 +250,7 @@ macro (seqan_setup_library NAME)
         ("${SEQAN_BUILD_SYSTEM}" STREQUAL "SEQAN_RELEASE_LIBRARY"))
         file (GLOB HEADERS
               RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+              include/seqan/[A-z]*/[A-z]/[A-z]*.h
               include/seqan/[A-z]*/[A-z]*.h
               include/seqan/[A-z]*.h)
         foreach (HEADER ${HEADERS})
@@ -257,6 +262,12 @@ macro (seqan_setup_library NAME)
     # Get list of header and super header files.
     file (GLOB SUPER_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/seqan/[A-z]*.h)
     file (GLOB HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/seqan/[A-z]*/[A-z]*.h)
+    file (GLOB SUB_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/seqan/[A-z]*/[A-z]*/[A-z]*.h)
+
+    # Sort headers for Xcode, ...
+    if (SUB_HEADERS)
+        list (SORT SUB_HEADERS)
+    endif (SUB_HEADERS)
 
     # Sort headers for Xcode, ...
     if (HEADERS)
@@ -288,7 +299,7 @@ macro (seqan_setup_library NAME)
     # variable includes the "SOURCES" argument for add_custom_target when
     # building with a generator for an IDE.
     set (TARGET_NAME seqan_${NAME})
-    add_custom_target (${TARGET_NAME} SOURCES ${HEADERS} ${SUPER_HEADERS})
+    add_custom_target (${TARGET_NAME} SOURCES ${SUB_HEADERS} ${HEADERS} ${SUPER_HEADERS})
 
     # Register the SeqAn library part (e.g. core, extras) as a target name.
     foreach (PART_NAME ${ARGV})
@@ -421,9 +432,9 @@ macro (seqan_setup_cuda_vars)
     else ()
       # Disable only Thrust warnings.
       string (REGEX REPLACE "-Wall" ""
-              SEQAN_CXX_FLAGS ${SEQAN_CXX_FLAGS})
+              SEQAN_CXX_FLAGS "${SEQAN_CXX_FLAGS}")
       string (REGEX REPLACE "-pedantic" ""
-              SEQAN_CXX_FLAGS ${SEQAN_CXX_FLAGS})
+              SEQAN_CXX_FLAGS "${SEQAN_CXX_FLAGS}")
       if (CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
         set (SEQAN_CXX_FLAGS "${SEQAN_CXX_FLAGS} -Wno-unused-parameter")
       endif (CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
@@ -685,9 +696,9 @@ macro (seqan_register_tests)
 
     # Remove NDEBUG definition for tests.
     string (REGEX REPLACE "-DNDEBUG" ""
-            CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
     string (REGEX REPLACE "-DNDEBUG" ""
-            CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
+            CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
     # Conditionally enable coverage mode by setting the appropriate flags.
     if (MODEL STREQUAL "NightlyCoverage")

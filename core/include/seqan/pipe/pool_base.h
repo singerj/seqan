@@ -359,7 +359,9 @@ namespace SEQAN_NAMESPACE_MAIN
             // retrieve the very first and wait for I/O transfer to complete
             bool waitResult = waitFor(*chain.first);
             if (!waitResult)
-                SEQAN_FAIL("%s operation could not be completed: \"%s\"", _pageFrameStatusString(*chain.first), strerror(errno));
+                SEQAN_FAIL("%s operation could not be completed: \"%s\"",
+                           _pageFrameStatusString(chain.first->status),
+                           strerror(errno));
 
             return processBuffer(*chain.first, *this);
         }
@@ -376,7 +378,9 @@ namespace SEQAN_NAMESPACE_MAIN
             // retrieve the next buffer in order and wait for I/O transfer to complete
             bool waitResult = waitFor(*chain.first);
             if (!waitResult)
-                SEQAN_FAIL("%s operation could not be completed: \"%s\"", _pageFrameStatusString(*chain.first), strerror(errno));
+                SEQAN_FAIL("%s operation could not be completed: \"%s\"",
+                           _pageFrameStatusString(chain.first->status),
+                           strerror(errno));
 
             return processBuffer(*chain.first, *this);
         }
@@ -451,7 +455,9 @@ namespace SEQAN_NAMESPACE_MAIN
         BufferHandler(TPool &_pool):
             pool(_pool),
             chain(_min(_pool.writeBackBuffers, _pool.pages())),
-			pageSize(_pool.pageSize) {}
+			pageSize(_pool.pageSize),
+			writePageNo(0),
+			_pages(0) {}
 
         BufferHandler(TPool &_pool, size_t _requestedBufferSize, size_t _writeBackBuffers = 1):
             pool(_pool),
@@ -510,7 +516,9 @@ namespace SEQAN_NAMESPACE_MAIN
                 // wait for I/O transfer to complete
                 bool waitResult = waitFor(*p);
                 if (!waitResult)
-                    SEQAN_FAIL("%s operation could not be completed: \"%s\"", _pageFrameStatusString(*p), strerror(errno));
+                    SEQAN_FAIL("%s operation could not be completed: \"%s\"",
+                               _pageFrameStatusString(p->status),
+                               strerror(errno));
 
                 freePage(*p, pool.file);
                 p = p->next;
@@ -772,16 +780,15 @@ namespace SEQAN_NAMESPACE_MAIN
 
 		typedef SizeType				size_type;
 
-        Pool(const PoolParameters &_conf = PoolParameters()):
-            file(NULL)
+        Pool(const PoolParameters &_conf = PoolParameters()) :
+            file(NULL), undefinedValue()
         {
 			_init(_conf);
             _setSize(0);
         }
         
 		Pool(HandlerArgs const &args, PoolParameters const &_conf = PoolParameters()):
-            file(NULL),
-			handlerArgs(args)
+            file(NULL), handlerArgs(args), undefinedValue()
         {
 			_init(_conf);
             _setSize(0);
@@ -789,7 +796,7 @@ namespace SEQAN_NAMESPACE_MAIN
         
         template < typename TInput, typename TPipeSpec >
         Pool(Pipe<TInput, TPipeSpec> &, const PoolParameters &_conf = PoolParameters()):
-            file(NULL)
+            file(NULL), undefinedValue()
         {
 			_init(_conf);
             _setSize(0);
@@ -797,36 +804,37 @@ namespace SEQAN_NAMESPACE_MAIN
         
         template < typename TInput, typename TPipeSpec >
 		Pool(Pipe<TInput, TPipeSpec> &, HandlerArgs const &args, PoolParameters const &_conf = PoolParameters()):
-            file(NULL),
-			handlerArgs(args)
+            file(NULL), handlerArgs(args), undefinedValue()
         {
 			_init(_conf);
             _setSize(0);
         }
         
         Pool(File &_file, const PoolParameters &_conf = PoolParameters()):
-            file(_file)
+            file(_file), undefinedValue()
         {
 			_init(_conf);
             _ownFile = false;
             _temporary = false;
             memBufferSize = 0;
-			_setSize(::seqan::size(file) / sizeof(TValue));
+			_setSize(::seqan::length(file) / sizeof(TValue));
         }
         
-        Pool(const char *fileName, const PoolParameters &_conf = PoolParameters())
+        Pool(const char *fileName, const PoolParameters &_conf = PoolParameters()) :
+            file(NULL), undefinedValue()
         {
 			_init(_conf);
             _temporary = false;
             memBufferSize = 0;
             _ownFile = open(file, fileName);
             if (_ownFile)
-                _setSize(::seqan::size(file) / sizeof(TValue));
+                _setSize(::seqan::length(file) / sizeof(TValue));
             else
                 _setSize(0);
         }
         
-        ~Pool() {
+        ~Pool()
+        {
             endRead();
             endWrite();
             if (_temporary) 
@@ -1013,6 +1021,7 @@ namespace SEQAN_NAMESPACE_MAIN
             readAheadBuffers = _conf.readAheadBuffers;
             writeBackBuffers = _conf.writeBackBuffers;
             writeBackBuckets = _conf.writeBackBuffers;
+            _partiallyFilled = true;
             listeners = 0;
             reader = NULL;
             writer = NULL;

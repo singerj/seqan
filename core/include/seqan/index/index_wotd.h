@@ -46,23 +46,17 @@ namespace SEQAN_NAMESPACE_MAIN
 .Tag.WOTD Index Fibres
 ..summary:Tag to select a specific fibre (e.g. table, object, ...) of an @Spec.IndexWotd@ index.
 ..remarks:These tags can be used to get @Metafunction.Fibre.Fibres@ of an WOTD based @Spec.IndexWotd@.
-..remarks:TODO(holtgrew): Ask David.
 ..cat:Index
 
 ..tag.WotdText:The original text the index should be based on.
-...remarks:TODO(holtgrew): Ask David.
 
 ..tag.WotdRawText:The raw text the index is really based on.
-...remarks:TODO(holtgrew): Ask David.
 
 ..tag.WotdSA:The suffix array.
-...remarks:TODO(holtgrew): Ask David.
 
 ..tag.WotdRawSA:The raw suffix array.
-...remarks:TODO(holtgrew): Ask David.
 
 ..tag.WotdDir:The child table.
-...remarks:TODO(holtgrew): Ask David.
 
 ..see:Metafunction.Fibre
 ..see:Function.getFibre
@@ -76,8 +70,6 @@ namespace SEQAN_NAMESPACE_MAIN
  * 
  * These tags can be used to get @link Fibre @endlink of an @link IndexWotd @endlink.
  * 
- * TODO(holtgrew): Ask David.
- * 
  * @see Fibre
  * @see Index#getFibre
  * @see IndexWotd
@@ -85,28 +77,72 @@ namespace SEQAN_NAMESPACE_MAIN
  * @tag WOTDIndexFibres#WotdDir
  * @brief The child table.
  * 
- * TODO(holtgrew): Ask David.
- * 
  * @tag WOTDIndexFibres#WotdRawSA
  * @brief The raw suffix array.
- * 
- * TODO(holtgrew): Ask David.
  * 
  * @tag WOTDIndexFibres#WotdText
  * @brief The original text the index should be based on.
  * 
- * TODO(holtgrew): Ask David.
- * 
  * @tag WOTDIndexFibres#WotdRawText
  * @brief The raw text the index is really based on.
  * 
- * TODO(holtgrew): Ask David.
- * 
  * @tag WOTDIndexFibres#WotdSA
  * @brief The suffix array.
- * 
- * TODO(holtgrew): Ask David.
  */
+
+//////////////////////////////////////////////////////////////////////////////
+/*!
+ * @fn IndexWotd#indexSA
+ * @headerfile <seqan/index.h>
+ * @brief Shortcut for <tt>getFibre(.., WotdSA)</tt>.
+ *
+ * @signature TSa indexSA(index);
+ *
+ * @param[in] index The @link IndexWotd @endlink object holding the fibre.
+ *
+ * @return TSa A reference to the @link WOTDIndexFibres#WotdSA @endlink fibre (partially sorted suffix array).
+ */
+ 
+/*!
+ * @fn IndexWotd#indexDir
+ * @headerfile <seqan/index.h>
+ * @brief Shortcut for <tt>getFibre(.., WotdDir())</tt>.
+ * @signature TFibre indexDir(index);
+ * 
+ * @param[in] index The @link IndexWotd @endlink object holding the fibre.
+ * 
+ * @return TFibre A reference to the @link WOTDIndexFibres#WotdDir @endlink fibre (tree structure).
+ */
+
+/*!
+ * @fn IndexWotd#saAt
+ * @headerfile <seqan/index.h>
+ * @note Advanced functionality, not commonly used.
+ * @brief Shortcut for <tt>value(indexSA(..), ..)</tt>.
+ *
+ * @signature TValue saAt(position, index);
+ *
+ * @param[in] index The @link IndexWotd @endlink object holding the fibre.
+ * @param[in] position A position in the array on which the value should be accessed.
+ *
+ * @return TValue A reference or proxy to the value in the @link WOTDIndexFibres#WotdSA @endlink fibre.
+ *                To be more precise, a reference to a position containing a value of type
+ *                @link SAValue @endlink is returned (or a proxy).
+ */
+
+/*!
+ * @fn IndexWotd#dirAt
+ * @headerfile <seqan/index.h>
+ * @brief Shortcut for <tt>value(indexDir(index), position)</tt>.
+ *
+ * @signature TFibre dirAt(position, index);
+ * 
+ * @param[in] index    The @link IndexWotd @endlink object holding the fibre.
+ * @param[in] position A position in the array on which the value should be accessed.
+ * 
+ * @return TFibre A reference to the @link WOTDIndexFibres#WotdDir @endlink fibre.
+ */
+
 	typedef FibreText		WotdText;
 	typedef FibreRawText	WotdRawText;
 	typedef FibreSA         WotdSA;
@@ -135,7 +171,8 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 /*!
  * @class IndexWotd
  * @extends Index
- * @headerfile seqan/index.h
+ * @implements StringTreeConcept
+ * @headerfile <seqan/index.h>
  * @brief An index based on a lazy suffix tree (see Giegerich et al., "Efficient implementation of lazy suffix
  *        trees").
  * 
@@ -180,7 +217,7 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 
 		typedef typename Value<Index>::Type					TValue;
 		typedef typename Value<TDir>::Type					TDirValue;
-		typedef typename Size<TText>::Type					TSize;
+		typedef typename Size<Index>::Type					TSize;
 		typedef String<TSize, Alloc<> >						TCounter;
 		typedef String<typename Value<TSA>::Type, Alloc<> >	TTempSA;
 		typedef typename Cargo<Index>::Type					TCargo;
@@ -213,7 +250,7 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		Index():
 			interSentinelNodes(false) {}
 
-		Index(Index &other):
+		Index(Index &other) :
 			text(other.text),
 			sa(other.sa),
 			dir(other.dir),
@@ -224,7 +261,7 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 			sentinelBound(other.sentinelBound),
 			interSentinelNodes(other.interSentinelNodes) {}
 
-		Index(Index const &other):
+		Index(Index const &other) :
 			text(other.text),
 			sa(other.sa),
 			dir(other.dir),
@@ -236,13 +273,17 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 			interSentinelNodes(other.interSentinelNodes) {}
 
 		template <typename TText_>
-		Index(TText_ &_text):
+		Index(TText_ &_text) :
 			text(_text),
+			sentinelOcc(0),
+			sentinelBound(0),
 			interSentinelNodes(false) {}
 
 		template <typename TText_>
 		Index(TText_ const &_text):
 			text(_text),
+			sentinelOcc(0),
+			sentinelBound(0),
 			interSentinelNodes(false) {}
 	};
 /*
@@ -257,6 +298,11 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
     };
 */
 
+template <typename TText, typename TSpec>
+SEQAN_CONCEPT_IMPL((Index<TText, IndexWotd<TSpec> >), (StringTreeConcept));
+
+template <typename TText, typename TSpec>
+SEQAN_CONCEPT_IMPL((Index<TText, IndexWotd<TSpec> > const), (StringTreeConcept));
 
 //////////////////////////////////////////////////////////////////////////////
 // default fibre creators
@@ -275,8 +321,9 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 // default finder
 
 	template < typename TText, typename TSpec >
-	struct DefaultFinder< Index<TText, IndexWotd<TSpec> > > {
-        typedef FinderSTree Type;	// standard suffix array finder is mlr-heuristic
+	struct DefaultFinder< Index<TText, IndexWotd<TSpec> > >
+    {
+        typedef FinderSTree Type;	// standard wotd finder is tree based search
     };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -288,10 +335,8 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		TSize		parentRepLen;	// representative length of parent node
 		TSize		edgeLen;		// length of edge above current node
 
-		VertexWotdOriginal_() {}
-		VertexWotdOriginal_(MinimalCtor):
-			parentRepLen(0),
-			edgeLen(0) 
+		VertexWotdOriginal_() : node(0), parentRepLen(0), edgeLen(0) {}
+		VertexWotdOriginal_(MinimalCtor) : node(0), parentRepLen(0), edgeLen(0)
 		{
 			_setSizeInval(node);
 		}
@@ -305,19 +350,27 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		Pair<TSize> range;			// current SA interval of hits
 		TSize		parentRight;	// right boundary of parent node's range (allows to go right)
 
-		VertexWotdModified_() {}
-		VertexWotdModified_(MinimalCtor):
+		VertexWotdModified_() :
 			node(0),
 			parentRepLen(0),
 			edgeLen(0),
 			range(0,0),
-			parentRight(0) {}
-		VertexWotdModified_(Pair<TSize> const &otherRange, TSize otherParentRight):
+			parentRight(0)
+        {}
+		VertexWotdModified_(MinimalCtor) :
+			node(0),
+			parentRepLen(0),
+			edgeLen(0),
+			range(0,0),
+			parentRight(0)
+        {}
+		VertexWotdModified_(Pair<TSize> const &otherRange, TSize otherParentRight) :
 			node(0),
 			parentRepLen(0),
 			edgeLen(0),
 			range(otherRange),
-			parentRight(otherParentRight) {}
+			parentRight(otherParentRight)
+        {}
 	};
 
 //////////////////////////////////////////////////////////////////////////////
@@ -423,8 +476,8 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	template < typename TText, typename TIndexSpec, typename TPropertyMap >
 	inline void
 	resizeVertexMap(
-		Index<TText, IndexWotd<TIndexSpec> > const& index,
-		TPropertyMap & pm)
+		TPropertyMap & pm,
+		Index<TText, IndexWotd<TIndexSpec> > const& index)
 	{
 		resize(pm, length(indexDir(index)), Generous());
 	}
@@ -471,14 +524,14 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 //////////////////////////////////////////////////////////////////////////////
 
 	template < typename TSize >
-	inline bool _isRoot(VertexWotdOriginal_<TSize> const &value) {
-//IOREV_notio_
+	inline bool _isRoot(VertexWotdOriginal_<TSize> const &value)
+    {
 		return value.node == 0;
 	}
 
 	template < typename TSize >
-	inline bool _isRoot(VertexWotdModified_<TSize> const &value) {
-//IOREV_notio_
+	inline bool _isRoot(VertexWotdModified_<TSize> const &value)
+    {
 		return value.node == 0; 
 	}
 
@@ -488,7 +541,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		Iter< Index<TText, IndexWotd<TIndexSpec> >, VSTree<TSpec> > const &it,
 		VSTreeIteratorTraits<TDfsOrder, False> const)
 	{
-//IOREV_notio_
 		typedef Index<TText, IndexWotd<TIndexSpec> > TIndex;
 		TIndex const &index = container(it);
 		return (dirAt(value(it).node, index) & index.LEAF) != 0;
@@ -500,7 +552,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		Iter< Index<TText, IndexWotd<TIndexSpec> >, VSTree<TSpec> > const &it,
 		VSTreeIteratorTraits<TDfsOrder, True> const)
 	{
-//IOREV_notio_
 		typedef Index<TText, IndexWotd<TIndexSpec> >	TIndex;
 
 		TIndex const &index = container(it);
@@ -951,7 +1002,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	inline void
 	_wotdCountChars(TBuckets &buckets, TText const &text)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TText const, Standard>::Type TTextIterator;
 
 		TTextIterator itText = begin(text, Standard());
@@ -965,7 +1015,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	inline void
 	_wotdCountChars(TBuckets &buckets, StringSet<TText, TSpec> const &stringSet)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TText const, Standard>::Type TTextIterator;
 
 		for(unsigned seqNo = 0; seqNo < length(stringSet); ++seqNo) 
@@ -986,9 +1035,8 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		TText const &text, 
 		TSA &sa,
 		TSize prefixLen)
-	{
-	SEQAN_CHECKPOINT
-		typedef typename Iterator<TText const, Standard>::Type	TTextIterator;
+    {
+        typedef typename Iterator<TText const, Standard>::Type	TTextIterator;
 		typedef typename Iterator<TSA, Standard>::Type          TSAIterator;
 		typedef typename Size<TText>::Type						TTextSize;
 
@@ -1018,7 +1066,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		TSA const &sa,
 		TSize prefixLen)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TText const, Standard>::Type	TTextIterator;
 		typedef typename Iterator<TSA const, Standard>::Type	TSAIterator;
 		typedef typename Size<TText>::Type						TTextSize;
@@ -1054,7 +1101,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		TSA const &sa,
 		TSize prefixLen)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TText const, Standard>::Type	TTextIterator;
 		typedef typename Iterator<TSA const, Standard>::Type	TSAIterator;
 		typedef typename Size<TText>::Type						TTextSize;
@@ -1098,7 +1144,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	inline typename Size<TBuckets>::Type
 	_wotdCummulativeSum(TBounds &bounds, TBuckets const &buckets, TSize offset)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TBounds, Standard>::Type          TBoundIterator;
 		typedef typename Iterator<TBuckets const, Standard>::Type   TBucketsIterator;
 
@@ -1143,7 +1188,7 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 */
 /*!
  * @fn IndexWotd#createWotdIndex
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Builds a the WOTD index.
  * 
  * @signature void createWotdIndex(sa, dir, text);
@@ -1151,7 +1196,7 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
  * @param[out] sa  The resulting list in which all <i>q</i>-grams are sorted alphabetically. 
  * @param[out] dir The resulting array that indicates at which position in index the corresponding <i>q</i>-grams
  *                 can be found.
- * @param[in] text The sequence. Types: @link SequenceConcept @endlink
+ * @param[in] text The sequence. Types: @link ContainerConcept @endlink
  * 
  * The resulting <tt>index</tt> contains the sorted list of qgrams.  For each possible <i>q</i>-gram pos contains
  * the first position in index that corresponds to this <i>q</i>-gram.
@@ -1162,7 +1207,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	typename Size<TIndex>::Type
 	_sortFirstWotdBucket(TIndex &index)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Fibre<TIndex, WotdText >::Type		TText;
 		typedef typename Fibre<TIndex, WotdSA >::Type			TSA;
 		typedef typename TIndex::TCounter						TCounter;
@@ -1207,7 +1251,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	typename Size< Index<StringSet<TText, TSpec>, TIndexSpec> >::Type
 	_sortFirstWotdBucket(Index<StringSet<TText, TSpec>, TIndexSpec> &index)
 	{
-	SEQAN_CHECKPOINT
 		typedef Index<StringSet<TText, TSpec>, TIndexSpec>		TIndex;
 		typedef typename Fibre<TIndex, WotdSA >::Type			TSA;
 		typedef typename TIndex::TCounter						TCounter;
@@ -1270,7 +1313,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		TEndPos right,
 		TSize prefixLen)
 	{
-	SEQAN_CHECKPOINT
 		typedef Index<TText, IndexWotd<WotdOriginal> >              TIndex;
 		typedef typename Fibre<TIndex, WotdSA >::Type               TSA;
 		typedef typename TIndex::TCounter                           TCounter;
@@ -1385,7 +1427,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		TEndPos right,
 		TSize prefixLen)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Fibre<TIndex, WotdText >::Type             TText;
 		typedef typename Fibre<TIndex, WotdSA >::Type               TSA;
 		typedef typename TIndex::TCounter                           TCounter;
@@ -1452,7 +1493,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		TEndPos right,
 		TSize prefixLen)
 	{
-	SEQAN_CHECKPOINT
 		typedef Index<StringSet<TText, TSpec>, TIndexSpec>			TIndex;
 		typedef typename Fibre<TIndex, WotdSA >::Type				TSA;
 		typedef typename TIndex::TCounter							TCounter;
@@ -1535,7 +1575,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	typename Size<TText>::Type 
 	_bucketLcp(TSA const &sa, TText const &text)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TText const, Standard>::Type	TTextIterator;
 		typedef typename Iterator<TSA const, Standard>::Type	TSAIterator;
 		typedef typename Value<TText>::Type						TValue;
@@ -1569,7 +1608,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	typename Size<TText>::Type 
 	_bucketLcp(TSA const &sa, TText const &text, TSize prefixLen)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TText const, Standard>::Type	TTextIterator;
 		typedef typename Iterator<TSA const, Standard>::Type	TSAIterator;
 		typedef typename Value<TText>::Type						TValue;
@@ -1601,7 +1639,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 	typename Size<TText>::Type 
 	_bucketLcp(TSA const &sa, StringSet<TText, TSpec> const &stringSet, TSize prefixLen)
 	{
-	SEQAN_CHECKPOINT
 		typedef typename Iterator<TText const, Standard>::Type	TTextIterator;
 		typedef typename Iterator<TSA const, Standard>::Type	TSAIterator;
 		typedef typename Value<TText>::Type						TValue;
@@ -1671,7 +1708,6 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		Index<TText, IndexWotd<WotdOriginal> > &index,
 		TPos dirOfs)
 	{
-	SEQAN_CHECKPOINT
 		typedef Index<TText, IndexWotd<WotdOriginal> >		TIndex;
 		typedef typename Fibre<TIndex, WotdDir>::Type		TDir;
 		typedef typename Iterator<TDir, Standard>::Type		TDirIterator;
@@ -1730,9 +1766,8 @@ if it is traversed. For details see Giegerich et al., "Efficient implementation 
 		Index<TText, IndexWotd<TSpec> > &index,
 		TSize dirOfs,
 		TSize lcp)
-	{
-	SEQAN_CHECKPOINT
-		typedef Index<TText, IndexWotd<TSpec> >			TIndex;
+    {
+        typedef Index<TText, IndexWotd<TSpec> >			TIndex;
 		typedef typename Fibre<TIndex, WotdDir>::Type		TDir;
 		typedef typename Iterator<TDir, Standard>::Type		TDirIterator;
 		typedef typename Size<TDir>::Type					TDirSize;

@@ -49,6 +49,18 @@
 #include <cxxabi.h>
 #endif
 
+namespace seqan {
+
+// ============================================================================
+// Forwards
+// ============================================================================
+
+template <typename T>
+struct Tag;
+
+//struct Nothing_;
+//typedef Tag<Nothing_> Nothing;
+
 // ============================================================================
 // Macros
 // ============================================================================
@@ -106,7 +118,7 @@
  * @macro ExceptionHandling#SEQAN_CATCH
  * @headerfile <seqan/basic.h>
  * @brief Replaces the C++ catch keyword.
- *
+ * 
  * @signature SEQAN_TRY {} SEQAN_CATCH() {}
  *
  * When exceptions are disabled, i.e. SEQAN_EXCEPTIONS is set to false, the code inside the catch block is never executed.
@@ -124,7 +136,7 @@
  * @macro ExceptionHandling#SEQAN_THROW
  * @headerfile <seqan/basic.h>
  * @brief Replaces the C++ throw keyword.
- *
+ * 
  * @signature SEQAN_THROW(Exception);
  *
  * When exceptions are disabled, i.e. AssertMacros#SEQAN_EXCEPTIONS is set to false, the macro turns into SEQAN_FAIL.
@@ -138,7 +150,7 @@
  *
  * See @link ExceptionHandling#SEQAN_TRY @endlink for a full example.
  */
-
+ 
 #ifdef SEQAN_EXCEPTIONS
 
 #define SEQAN_TRY           try
@@ -155,8 +167,6 @@
 #define SEQAN_RETHROW
 
 #endif // #ifdef SEQAN_EXCEPTIONS
-
-namespace seqan {
 
 // ============================================================================
 // Exceptions
@@ -257,68 +267,84 @@ typedef std::runtime_error      RuntimeError;
 //typedef std::logic_error        LogicError;
 
 // ============================================================================
-// Classes
+// Metafunctions
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// Class Demangler
+// Metafunction ExceptionMessage
 // ----------------------------------------------------------------------------
-// Holds the name of a given C++ type T.
 
-template <typename T>
-struct Demangler
+template <typename T, typename TSpec = void>
+struct ExceptionMessage
 {
-#ifdef PLATFORM_GCC
-    char * data_begin;
-#else
-    char const * data_begin;
-#endif //PLATFORM_GCC
+    static const std::string VALUE;
+};
 
-    Demangler()
+template <typename T, typename TSpec>
+const std::string ExceptionMessage<T, TSpec>::VALUE;
+
+// ----------------------------------------------------------------------------
+// Function getExceptionMessage()
+// ----------------------------------------------------------------------------
+
+template <typename TFunctor, typename TContext>
+inline std::string const &
+getExceptionMessage(TFunctor const &, TContext const &)
+{
+    return ExceptionMessage<TFunctor, TContext>::VALUE;
+}
+
+// ============================================================================
+// Functors
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Functor AssertFunctor
+// ----------------------------------------------------------------------------
+
+template <typename TFunctor, typename TException, typename TContext = Nothing, bool RETURN_VALUE = false>
+struct AssertFunctor
+{
+    TFunctor func;
+
+    AssertFunctor() {}
+
+    AssertFunctor(TFunctor & func) :
+        func(func)
+    {}
+
+    std::string escapeChar(unsigned char val)
     {
-        T t;
-        _demangle(t);
+        if (val <= '\r')
+        {
+            static const char * const escapeCodes[14] = {
+                "\\0",  "\\1",  "\\2",  "\\3",  "\\4",  "\\5",  "\\6",  "\\a",
+                "\\b",  "\\t",  "\\n",  "\\v",  "\\f",  "\\r" };
+            return std::string(escapeCodes[val]);
+        }
+        else if (' ' <= val && val < 128u)
+            return std::string() + (char)val;
+        else
+        {
+            char buffer[6]; // 5 + 1, e.g. "\0xff" + trailing zero
+            sprintf(buffer, "\\%#2x", (unsigned)val);
+            return std::string(buffer);
+        }
     }
 
-    Demangler(T & t)
+    template <typename TValue>
+    bool operator() (TValue const & val)
     {
-        _demangle(t);
+        if (SEQAN_UNLIKELY(!func(val)))
+            throw TException(std::string("Unexpected character '") + escapeChar(val) + "' found. " +
+                             getExceptionMessage(func, TContext()));
+        return RETURN_VALUE;
     }
-
-#ifdef PLATFORM_GCC
-    ~Demangler()
-    {
-        free(data_begin);
-    }
-
-    void _demangle(T & t)
-    {
-        int status;
-        data_begin = abi::__cxa_demangle(typeid(t).name(), NULL, NULL, &status);
-        if (status != 0)
-            SEQAN_FAIL("Demangling of %s failed with error code %d\n", typeid(t).name(), status);
-    }
-#else
-    void _demangle(T & t)
-    {
-        data_begin = typeid(t).name();
-    }
-#endif //PLATFORM_GCC
 };
 
 // ============================================================================
 // Functions
 // ============================================================================
-
-// ----------------------------------------------------------------------------
-// Function toCString(Demangler)
-// ----------------------------------------------------------------------------
-
-template <typename T>
-inline char const * toCString(Demangler<T> const & me)
-{
-    return me.data_begin;
-}
 
 // ----------------------------------------------------------------------------
 // Function globalExceptionHandler()
@@ -331,11 +357,8 @@ static void globalExceptionHandler();
 // Install global exception handler.
 static const std::terminate_handler _globalExceptionHandler = std::set_terminate(globalExceptionHandler);
 
-static void globalExceptionHandler()
+inline static void globalExceptionHandler()
 {
-    // Suppress unused variable warning.
-    (void)_globalExceptionHandler;
-
     SEQAN_TRY
     {
         SEQAN_RETHROW;

@@ -104,13 +104,10 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     setDate(parser, "July 2014");
 
     // Define usage line and long description.
-    addUsageLine(parser, "[\\fIOPTIONS\\fP] \"\\fITEXT\\fP\"");
-    addDescription(parser, "This is the application skelleton and you should modify this string.");
-    
     addUsageLine(parser, "[\\fIOPTIONS\\fP] \\fB-is\\fP \\fISAMPLEFILE\\fP \\fB-ir\\fP \\fIREFERENCE\\fP \\fB-t\\fP \\fITYPE [dna, peptide]\\fP \\fB-o\\fP \\fIOUTFILE\\fP");
-    addDescription(parser, "This program determines the locations of the input queries in the reference.");
+    addDescription(parser, "This program determines the locations of the input queries in the reference using a suffix-tree index.");
 
-    addOption(parser, ArgParseOption("is", "inputSample", "Name of the multi-FASTA input.", ArgParseArgument::INPUTFILE, "IN"));
+    addOption(parser, ArgParseOption("is", "inputSample", "Name of the multi-FASTA input.", ArgParseArgument::INPUT_FILE, "IN"));
     setRequired(parser, "is");
     setValidValues(parser, "is", "fasta fa fna");
    
@@ -118,21 +115,21 @@ parseCommandLine(AppOptions & options, int argc, char const ** argv)
     setRequired(parser, "t");
     setValidValues(parser, "t", "dna peptide");
 
-    addOption(parser, ArgParseOption("ir", "inputRefs", "Name of the multi-FASTA input.", ArgParseArgument::INPUTFILE, "IN"));
+    addOption(parser, ArgParseOption("ir", "inputRefs", "Name of the multi-FASTA input.", ArgParseArgument::INPUT_FILE, "IN"));
     setRequired(parser, "ir");
     setValidValues(parser, "ir", "fasta fa fna");
 
-    addOption(parser, ArgParseOption("o", "outputFileName", "Name of the output file.", ArgParseArgument::OUTPUTFILE, "OUT"));
+    addOption(parser, ArgParseOption("o", "outputFileName", "Name of the output file.", ArgParseArgument::OUTPUT_FILE, "OUT"));
     setRequired(parser, "o");
     setValidValues(parser, "o", "gff");
 
-    addOption(parser, ArgParseOption("oI", "outputIndexName", "Name of the index to store.", ArgParseArgument::OUTPUTFILE, "OUT"));
+    addOption(parser, ArgParseOption("oI", "outputIndexName", "Name of the index to store.", ArgParseArgument::OUTPUT_FILE, "OUT"));
     addOption(parser, seqan::ArgParseOption("sO", "storeOnly", "Stop after storing the index."));
 
     addOption(parser, ArgParseOption("th", "threads", "The number of threads to be used.", ArgParseArgument::INTEGER));
     addOption(parser, ArgParseOption("bf", "bufferSize", "The number of reads stored in a buffer before writing them to disk.", ArgParseArgument::INTEGER));
     ArgParseOption gcOption("gc", "geneticCode", "The genetic code to be used for translation.", ArgParseArgument::INTEGER);
-    setHelpText(gcOption, "There are several different genetic codes available taken from NCBI: 0: Canonical, 1: VertMitochondrial, 2: YeastMitochondrial, 3: MoldMitochondrial, 4: InvertMitochondrial, 5: Ciliate, 6: FlatwormMitochondrial, 7: Euplotid, 8: Prokaryote, 9: AltYeast, 10: AscidianMitochondrial, 11: AltFlatwormMitochondrial, 12: Blepherisma, 13: ChlorophyceanMitochondrial, 14: TrematodeMitochondrial, 15: ScenedesmusMitochondrial, 16: ThraustochytriumMitochondrial, 17: PterobranchiaMitochondrial, 18: Gracilibacteria");
+    setHelpText(gcOption, "There are several different genetic codes available taken from NCBI: 1 - Canonical, 2 - VertMitochondrial, 3 - YeastMitochondrial, 4 - MoldMitochondrial, 5 - InvertMitochondrial, 6 - Ciliate, 9 - FlatwormMitochondrial, 10 - Euplotid, 11 - Prokaryote, 12 - AltYeast, 13 - AscidianMitochondrial, 14 - AltFlatwormMitochondrial, 15 - Blepherisma, 16 - ChlorophyceanMitochondrial, 21 - TrematodeMitochondrial, 22 - ScenedesmusMitochondrial, 23 - ThraustochytriumMitochondrial, 24 - PterobranchiaMitochondrial, 25 - Gracilibacteria");
     addOption(parser, gcOption);
 
     // Parse command line.
@@ -236,19 +233,40 @@ int main(int argc, char const ** argv)
     // DB
     double startTime = sysTime();
     std::cout << "Reading database took ";
-    seqan::SequenceStream seqInDB(seqan::toCString(options.dbFileName));
+    seqan::SeqFileIn seqInDB;
+    if (!open(seqInDB, seqan::toCString(options.dbFileName)))
+    {
+	std::cerr << "Can't open the file." << std::endl;
+	return 1;
+    }
     seqan::StringSet<seqan::CharString> dbIds;
-    seqan::StringSet<seqan::String<char>, Owner<seqan::ConcatDirect<> > > dbRaw;
+    seqan::StringSet<seqan::String<char> > dbRaw;
 
+    unsigned dbLength=0;
     if (atEnd(seqInDB))
     {
         std::cout << "ERROR: File does not contain any sequences!\n";
         return 1;
     }
-    if(seqan::readAll(dbIds, dbRaw, seqInDB) != 0)
+    while (!atEnd(seqInDB))
     {
-        std::cout << "ERROR: Could not read db!\n";
-        return 1;
+        try
+        {
+
+	    resize(dbIds, dbLength + 1);
+	    resize(dbRaw, dbLength + 1);
+	    readRecord(dbIds[dbLength], dbRaw[dbLength], seqInDB);
+	    dbLength=length(dbIds);
+	}
+	catch (UnexpectedEnd &)
+	{
+		return 1;
+	}
+	catch (ParseError & e)
+	{
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
     }
     std::cout << sysTime() - startTime << " seconds" << std::endl;
 
@@ -268,43 +286,43 @@ int main(int argc, char const ** argv)
         if (options.inputType == "dna")
         {
             switch(options.geneticCode) {
-                case (0) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Canonical>());
+                case (1) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<CANONICAL>());
                            break;
-                case (1) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<VertMitochondrial>());
+                case (2) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<VERT_MITOCHONDRIAL>());
                            break;
-                case (2) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<YeastMitochondrial>());
+                case (3) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<YEAST_MITOCHONDRIAL>());
                            break;
-                case (3) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<MoldMitochondrial>());
+                case (4) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<MOLD_MITOCHONDRIAL>());
                            break;
-                case (4) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<InvertMitochondrial>());
+                case (5) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<INVERT_MITOCHONDRIAL>());
                            break;
-                case (5) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Ciliate>());
+                case (6) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<CILIATE>());
                            break;
-                case (6) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<FlatwormMitochondrial>());
+                case (9) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<FLATWORM_MITOCHONDRIAL>());
                            break;
-                case (7) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Euplotid>());
+                case (10) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<EUPLOTID>());
                            break;
-                case (8) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Prokaryote>());
+                case (11) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<PROKARYOTE>());
                            break;
-                case (9) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<AltYeast>());
+                case (12) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ALT_YEAST>());
                            break;
-                case (10) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<AscidianMitochondrial>());
+                case (13) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ASCIDIAN_MITOCHONDRIAL>());
                            break;
-                case (11) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<AltFlatwormMitochondrial>());
+                case (14) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ALT_FLATWORM_MITOCHONDRIAL>());
                            break;
-                case (12) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Blepherisma>());
+                case (15) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<BLEPHARISMA>());
                            break;
-                case (13) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ChlorophyceanMitochondrial>());
+                case (16) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<CHLOROPHYCEAN_MITOCHONDRIAL>());
                            break;
-                case (14) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<TrematodeMitochondrial>());
+                case (21) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<TREMATODE_MITOCHONDRIAL>());
                            break;
-                case (15) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ScenedesmusMitochondrial>());
+                case (22) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<SCENEDESMUS_MITOCHONDRIAL>());
                            break;
-                case (16) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<ThraustochytriumMitochondrial>());
+                case (23) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<THRAUSTOCHYTRIUM_MITOCHONDRIAL>());
                            break;
-                case (17) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<PterobranchiaMitochondrial>());
+                case (24) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<PTEROBRANCHIA_MITOCHONDRIAL>());
                            break;
-                case (18) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<Gracilibacteria>());
+                case (25) : translate(aaSeqs, dbRaw, SIX_FRAME, GeneticCode<GRACILIBACTERIA>());
                            break;
                 default : std::cout << "Unknown Gentetic Code!" << std::endl;
                           return 1;
@@ -334,7 +352,7 @@ int main(int argc, char const ** argv)
     clear(dbRaw);
     shrinkToFit(dbRaw);
 
-    seqan::SequenceStream seqInSample(seqan::toCString(options.sampleFileName));
+    seqan::SeqFileIn seqInSample(seqan::toCString(options.sampleFileName));
     std::fstream fout(toCString(options.outputFileName), std::ios::binary | std::ios::out | std::ios::app);
 
     startTime = sysTime();
@@ -344,19 +362,34 @@ int main(int argc, char const ** argv)
     {
         // Sample
         seqan::StringSet<seqan::CharString> sampleIds;
+	resize(sampleIds, options.bufferSize);
         seqan::StringSet<seqan::String<char> > sampleSeqs;
+	resize(sampleSeqs, options.bufferSize);
 
         SEQAN_OMP_PRAGMA(critical (read_chunk))
         {
-
-            if (!atEnd(seqInSample))
+	    unsigned errorReads = 0;
+	    unsigned i = 0;
+            for ( ; !atEnd(seqInSample) && i < options.bufferSize; ++i)
             {
-                if(seqan::readBatch(sampleIds, sampleSeqs, seqInSample, options.bufferSize) != 0)
+                try
                 {
-
-                    std::cout << "ERROR: Could not read samples!\n";
+		    seqan::readRecord(sampleIds[i-errorReads], sampleSeqs[i-errorReads], seqInSample);
                 }
+		catch (UnexpectedEnd &)
+		{
+			break;
+		}
+		catch (ParseError & e)
+		{
+			std::cerr << e.what() << std::endl;
+			++errorReads;
+			resize(sampleIds, options.bufferSize - errorReads);
+			resize(sampleSeqs, options.bufferSize - errorReads);
+		}
             }
+	    resize(sampleIds, i);
+	    resize(sampleSeqs, i);
         }
 
         if (length(sampleIds) == 0)
@@ -366,9 +399,9 @@ int main(int argc, char const ** argv)
         String<GffRecord> records;
         GffRecord record;
         record.type="peptide";
-        appendValue(record.tagName, "ID");
-        appendValue(record.tagName, "Name");
-        resize(record.tagValue, 2);
+        appendValue(record.tagNames, "ID");
+        appendValue(record.tagNames, "Name");
+        resize(record.tagValues, 2);
         Pair<unsigned> correctPos;
         if (options.inputType == "dna")
         {
@@ -383,8 +416,8 @@ int main(int argc, char const ** argv)
                     record.beginPos=correctPos.i1;
                     record.endPos=correctPos.i2;
                     (position(finder).i2 % 6 > 2) ? record.strand = '+' : record.strand = '-';
-                    record.tagValue[0] = sampleIds[i];
-                    record.tagValue[1] = record.source;
+                    record.tagValues[0] = sampleIds[i];
+                    record.tagValues[1] = record.source;
                     appendValue(records, record);
                 }
                 SEQAN_OMP_PRAGMA(critical (write_chunk))
@@ -410,8 +443,8 @@ int main(int argc, char const ** argv)
                     record.source=options.sampleFileName;
                     record.beginPos=position(finder).i2;
                     record.endPos=record.beginPos + length(sampleSeqs[i]);
-                    record.tagValue[0] = sampleIds[i];
-                    record.tagValue[1] = record.source;
+                    record.tagValues[0] = sampleIds[i];
+                    record.tagValues[1] = record.source;
                     appendValue(records, record);
 
                 }

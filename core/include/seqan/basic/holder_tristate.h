@@ -212,32 +212,26 @@ struct Holder<TValue const, Tristate>
     // Constructors; Destructor
     // ------------------------------------------------------------------------
 
-    Holder() : data_state(EMPTY)
-    {
-        SEQAN_CHECKPOINT;
-    }
+    Holder() : data_value(), data_state(EMPTY)
+    {}
 
-    Holder(Holder const & source_) : data_state(EMPTY)
+    Holder(Holder const & source_) : data_value(), data_state(EMPTY)
     {
-        SEQAN_CHECKPOINT;
         assign(*this, source_);
     }
 
-    Holder(TValue & value_) : data_state(EMPTY)
+    Holder(TValue & value_) : data_value(), data_state(EMPTY)
     {
-        SEQAN_CHECKPOINT;
         setValue(*this, value_);
     }
 
-    Holder(TValue const & value_): data_state(EMPTY)
+    Holder(TValue const & value_) : data_value(), data_state(EMPTY)
     {
-        SEQAN_CHECKPOINT;
         setValue(*this, value_);
     }
 
     ~Holder()
     {
-        SEQAN_CHECKPOINT;
         clear(*this);
     }
 
@@ -971,6 +965,17 @@ setValue(Holder<TValue, Tristate> & me,
 {
     SEQAN_CHECKPOINT;
     set(value(me), value_);
+}
+
+// ----------------------------------------------------------------------------
+// Function swap()
+// ----------------------------------------------------------------------------
+
+template <typename TValue>
+void swap(Holder<TValue, Tristate> & lhs, Holder<TValue, Tristate> & rhs)
+{
+    std::swap(lhs.data_value, rhs.data_value);
+    std::swap(lhs.data_state, rhs.data_state);
 }
 
 // ----------------------------------------------------------------------------

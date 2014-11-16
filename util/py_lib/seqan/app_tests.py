@@ -33,6 +33,7 @@ import subprocess
 import shutil
 import sys
 import tempfile
+import gzip
 
 def md5ForFile(f, block_size=2**20):
     """Compute MD5 of a file.
@@ -53,6 +54,10 @@ SUPPRESSIONS = '--suppressions=' + os.path.join(os.path.dirname(__file__), '..',
 VALGRIND_FLAGS = [SUPPRESSIONS] + '--error-exitcode=1 -q --tool=memcheck --leak-check=yes --show-reachable=yes --workaround-gcc296-bugs=yes --num-callers=50 --'.split()
 VALGRIND_PATH = '/usr/bin/valgrind'
 
+class BadResultException(Exception):
+    pass
+
+
 class TestConf(object):
     """Configuration for one tests.
 
@@ -70,10 +75,12 @@ class TestConf(object):
                       if the variable is not None.
       redir_stderr -- optional string that gives the path to redirect stderr to
                       if the variable is not None.
+      check_callback -- callable throwing an exception on erorrs.
     """
 
     def __init__(self, program, args, to_diff=[], name=None,
-                 redir_stdout=None, redir_stderr=None):
+                 redir_stdout=None, redir_stderr=None,
+                 check_callback=None):
         """Constructor, args correspond to attrs."""
         self.program = program
         self.args = args
@@ -85,6 +92,7 @@ class TestConf(object):
             self.valgrind = False
         else:
             self.valgrind = TestConf.valgrind
+        self.check_callback = check_callback
 
     def __str__(self):
         fmt = 'TestConf(%s, %s, %s, %s, %s, %s)'
@@ -287,13 +295,30 @@ def runTest(test_conf):
     for tuple_ in test_conf.to_diff:
         expected_path, result_path = tuple_[:2]
         binary = False
+        gunzip = False
         transforms = [NormalizeLineEndingsTransform()]
         if len(tuple_) >= 3:
             if tuple_[2] == 'md5':
                 binary = True
+            elif tuple_[2] == 'gunzip':
+                binary = True
+                gunzip = True
             else:
                 transforms += tuple_[2]
         try:
+            if gunzip:
+                f = gzip.open(expected_path, 'rb')
+                expected_md5 = md5ForFile(f)
+                f.close()
+                f = gzip.open(result_path, 'rb')
+                result_md5 = md5ForFile(f)
+                f.close()
+                if expected_md5 == result_md5:
+                    continue
+                else:
+                    tpl = (expected_path, expected_md5, result_md5, result_path)
+                    print >>sys.stderr, 'md5(gunzip(%s)) == %s != %s == md5(gunzip(%s))' % tpl
+                    result = False
             if binary:
                 with open(expected_path, 'rb') as f:
                     expected_md5 = md5ForFile(f)
@@ -326,6 +351,16 @@ def runTest(test_conf):
         except Exception, e:
             fmt = 'Error when trying to compare %s to %s: %s ' + str(type(e))
             print >>sys.stderr, fmt % (expected_path, result_path, e)
+            result = False
+    # Call check callable.
+    if test_conf.check_callback:
+        try:
+            test_conf.check_callback()
+        except BadResultException, e:
+            print >>sys.stderr, 'Bad result: ' + str(e)
+            result = False
+        except Exception, e:
+            print >>sys.stderr, 'Error in checker: ' + str(type(e)) + ' ' + str(e)
             result = False
     return result
 

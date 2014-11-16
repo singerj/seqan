@@ -15,7 +15,7 @@ message (STATUS "Configuring core/apps/fiona")
 # ----------------------------------------------------------------------------
 
 # Search SeqAn and select dependencies.
-set (SEQAN_FIND_DEPENDENCIES OpenMP)
+set (SEQAN_FIND_DEPENDENCIES OpenMP ZLIB)
 find_package (SeqAn REQUIRED)
 find_package (Boost)
 
@@ -30,7 +30,8 @@ endif ()
 # ----------------------------------------------------------------------------
 
 # Add include directories.
-include_directories (${SEQAN_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+include_directories (${SEQAN_INCLUDE_DIRS})
+include_directories (SYSTEM ${Boost_INCLUDE_DIRS})
 
 # Add definitions set by find_package (SeqAn).
 add_definitions (${SEQAN_DEFINITIONS})
@@ -79,7 +80,7 @@ install (FILES example/reads.fa
 # App Test
 # ----------------------------------------------------------------------------
 
-#seqan_add_app_test (fiona)
+seqan_add_app_test (fiona)
 
 # ----------------------------------------------------------------------------
 # Setup Common Tool Description for Generic Workflow Nodes

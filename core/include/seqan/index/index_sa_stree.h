@@ -72,7 +72,7 @@ struct IndexSa {};
 /*!
  * @class IndexSa
  * @extends Index
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief An index based on a suffix array.
  * @signature template <typename TText, typename TSpec>
  *            class Index<TText, IndexSa<TSpec> >;
@@ -181,6 +181,13 @@ struct EdgeLabel<Iter<Index<TText, IndexSa<TIndexSpec> >, VSTree<TSpec> > >
 {
     typedef typename Value<Index<TText, IndexSa<TIndexSpec> > >::Type Type;
 };
+
+template < typename TText, typename TIndexSpec >
+struct DefaultFinder< Index<TText, IndexSa<TIndexSpec> > >
+{
+    typedef FinderMlr Type;	// standard suffix array finder is mlr-heuristic
+};
+
 
 // ============================================================================
 // Functions

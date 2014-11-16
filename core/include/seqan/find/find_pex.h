@@ -123,7 +123,7 @@ struct PexRange_{
  * @signature template <typename TNeedle, typename TVerification, typename TMultiFinder>
  *            class Pattern<TNeedle, Pex<TVerification, TMultiFinder> >;
  *
- * @tparam TNeedle       The needle type. Type: @link SequenceConcept @endlink
+ * @tparam TNeedle       The needle type. Type: @link ContainerConcept @endlink
  * @tparam TVerification Determines if the hierarchical verification proposed by Navarro and Beaza-Yates is used or
  *                       not.
  * @tparam TMultiFinder  Specifies the algorithm for the multiple exact string matching algorithm.  Type: AhoCorasick.
@@ -158,7 +158,7 @@ struct PexRange_{
  * @signature template <typename TNeedle, typename TMultiFinder>
  *            class Pattern<TNeedle, Pex<Hierarchical, TMultiFinder> >;
  *
- * @tparam TNeedle      The needle type. Type: @link SequenceConcept @endlink
+ * @tparam TNeedle      The needle type. Type: @link ContainerConcept @endlink
  * @tparam TMultiFinder Specifies the algorithm for th emultiple exact string matching algorithm.
  */
 
@@ -184,7 +184,7 @@ struct PexRange_{
  * @signature template <typename TNeedle, typename TMultiFinder>
  *            class Pattern<TNeedle, Pex<NonHierarchical, TMultiFinder> >;
  *
- * @tparam TNeedle      The needle type. Type: @link SequenceConcept @endlink
+ * @tparam TNeedle      The needle type. Type: @link ContainerConcept @endlink
  * @tparam TMultiFinder Specifies the algorithm for th emultiple exact string matching algorithm.
  */
 
@@ -239,26 +239,23 @@ class Pattern<TNeedle, Pex<TVerification, TMultiFinder > >:
 
    unsigned needleLength;
 
-   Pattern() {}
+   Pattern() :
+       limit(1), lastFPos(0), lastFNdl(0), findNext(false), patternNeedsInit(true)
+   {}
 
    template <typename TNeedle2>
-   Pattern(TNeedle2 const & ndl)
-     : limit(1)
+   Pattern(TNeedle2 const & ndl) :
+       limit(1), lastFPos(0), lastFNdl(0), findNext(false), patternNeedsInit(true)
    {
      setHost(*this, ndl);
    }
 
    template <typename TNeedle2>
-   Pattern(TNeedle2 const & ndl, int _limit = -1)
-     : limit(- _limit)
+   Pattern(TNeedle2 const & ndl, int _limit = -1) :
+       limit(-_limit), lastFPos(0), lastFNdl(0), findNext(false), patternNeedsInit(true)
    {
-SEQAN_CHECKPOINT
      setHost(*this, ndl);
    }
-
-   ~Pattern() {
-     SEQAN_CHECKPOINT
-    }
 };
 
 //////////////////////////////////////////////////////////////////////////////

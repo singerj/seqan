@@ -41,38 +41,6 @@
 using namespace seqan;
 
 // ============================================================================
-// Yara Limits
-// ============================================================================
-
-// ----------------------------------------------------------------------------
-// Class YaraBits
-// ----------------------------------------------------------------------------
-
-template <typename TSpec = void>
-struct YaraBits
-{
-    static const unsigned CONTIG_ID   = 8;
-    static const unsigned CONTIG_SIZE = 30;
-    static const unsigned READ_ID     = 21;
-    static const unsigned READ_SIZE   = 14;
-    static const unsigned ERRORS      = 6;
-};
-
-// ----------------------------------------------------------------------------
-// Class YaraLimits
-// ----------------------------------------------------------------------------
-
-template <typename TSpec = void>
-struct YaraLimits
-{
-    static const unsigned CONTIG_ID   = Power<2, YaraBits<TSpec>::CONTIG_ID>::VALUE - 1;
-    static const unsigned CONTIG_SIZE = Power<2, YaraBits<TSpec>::CONTIG_SIZE>::VALUE - 1;
-    static const unsigned READ_ID     = Power<2, YaraBits<TSpec>::READ_ID>::VALUE - 1;
-    static const unsigned READ_SIZE   = Power<2, YaraBits<TSpec>::READ_SIZE>::VALUE - 1;
-    static const unsigned ERRORS      = Power<2, YaraBits<TSpec>::ERRORS>::VALUE - 1;
-};
-
-// ============================================================================
 // String Types
 // ============================================================================
 
@@ -80,73 +48,11 @@ struct YaraLimits
 // String Spec
 // ----------------------------------------------------------------------------
 
-//#ifndef YARA_INDEXER
-//typedef MMap<>  YaraStringSpec;
-//#else
+#ifndef YARA_INDEXER
+typedef MMap<>  YaraStringSpec;
+#else
 typedef Alloc<> YaraStringSpec;
-//#endif
-
-// ----------------------------------------------------------------------------
-// ReadSeqs Size
-// ----------------------------------------------------------------------------
-// NOTE(esiragusa): Register usage does not decrease.
-
-//typedef StringSet<String<Dna5Q>, Owner<ConcatDirect<> > >       TReadSeqs;
-
-//namespace seqan {
-//template <>
-//struct Size<TReadSeqs>
-//{
-//    typedef __uint32 Type;
-//};
-//
-//#ifdef PLATFORM_CUDA
-//template <>
-//struct Size<typename Device<TReadSeqs>::Type>
-//{
-//    typedef __uint32 Type;
-//};
-//
-//template <>
-//struct Size<typename View<typename Device<TReadSeqs>::Type>::Type>
-//{
-//    typedef __uint32 Type;
-//};
-//#endif
-//}
-
-// ----------------------------------------------------------------------------
-// ContainerView Size
-// ----------------------------------------------------------------------------
-// NOTE(esiragusa): Register usage does not decrease.
-
-//#ifdef PLATFORM_CUDA
-//namespace seqan {
-//template <typename TAlloc>
-//struct Size<thrust::device_vector<Dna, TAlloc> >
-//{
-//    typedef __uint32 Type;
-//};
-//
-//template <typename TAlloc>
-//struct Size<thrust::device_vector<bool, TAlloc> >
-//{
-//    typedef __uint32 Type;
-//};
-//
-//template <typename TValue, typename TAlloc, typename TViewSpec>
-//struct Size<ContainerView<thrust::device_vector<TValue, TAlloc>, TViewSpec> >
-//{
-//    typedef __uint32 Type;
-//};
-//
-//template <typename TValue, typename TAlloc, typename TViewSpec, typename TSSetSpec>
-//struct Size<StringSet<ContainerView<thrust::device_vector<TValue, TAlloc>, TViewSpec>, TSSetSpec> >
-//{
-//    typedef __uint32 Type;
-//};
-//}
-//#endif
+#endif
 
 // ============================================================================
 // Index Types
@@ -184,26 +90,6 @@ struct Size<YaraIndex>
 {
     typedef __uint32 Type;
 };
-
-template <>
-struct Size<View<YaraIndex>::Type>
-{
-    typedef __uint32 Type;
-};
-
-#ifdef PLATFORM_CUDA
-template <>
-struct Size<Device<YaraIndex>::Type>
-{
-    typedef __uint32 Type;
-};
-
-template <>
-struct Size<View<Device<YaraIndex>::Type>::Type>
-{
-    typedef __uint32 Type;
-};
-#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -240,20 +126,6 @@ struct StringSetPosition<YaraContigsFM>
 {
     typedef Pair<__uint8, __uint32, Pack> Type;
 };
-
-template <>
-struct StringSetPosition<View<YaraContigsFM>::Type>
-{
-    typedef Pair<__uint8, __uint32, Pack> Type;
-};
-
-#ifdef PLATFORM_CUDA
-template <>
-struct StringSetPosition<Device<YaraContigsFM>::Type>
-{
-    typedef Pair<__uint8, __uint32, Pack> Type;
-};
-#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -319,49 +191,81 @@ struct RankDictionaryFibreSpec<RankDictionary<bool, Naive<TSpec> > >
 // ----------------------------------------------------------------------------
 // CSA Size
 // ----------------------------------------------------------------------------
-
-//namespace seqan {
-//// TODO(esiragusa): Overload Size<CSA> instead of Size<SparseString>
-//template <typename TValueString>
-//struct Size<SparseString<TValueString, void> >
-//{
-//    typedef __uint32    Type;
-//};
-//}
-
-// ----------------------------------------------------------------------------
-// Shape Size
-// ----------------------------------------------------------------------------
+// TODO(esiragusa): Overload Size<CSA> instead of Size<SparseString>
 
 namespace seqan {
-template <typename TValue, unsigned q>
-struct Value<Shape<TValue, UngappedShape<q> > >
+template <typename TValueString>
+struct Size<SparseString<TValueString, void> >
 {
     typedef __uint32    Type;
 };
+}
 
 // ----------------------------------------------------------------------------
-// StringSet MinLength
+// ContigSeqs StringSetLimits
 // ----------------------------------------------------------------------------
 
-template <typename TString, typename TSpec>
-struct MinLength<StringSet<TString, TSpec> >
+namespace seqan {
+template <>
+struct StringSetLimits<YaraContigs>
 {
-    static const unsigned VALUE = 10;
+    typedef String<__uint32>    Type;
+};
+}
+
+// ----------------------------------------------------------------------------
+// ContigNames StringSetLimits
+// ----------------------------------------------------------------------------
+
+namespace seqan {
+template <typename TString>
+struct StringSetLimits<StringSet<TString, Owner<ConcatDirect<__uint32> > > >
+{
+    typedef String<__uint32>    Type;
 };
 
-#ifdef PLATFORM_CUDA
-template <typename TValue, typename TSpec>
-struct MinLength<thrust::device_vector<TValue, TSpec> >
+template <typename TString, typename TSource, typename TExpand>
+inline void
+appendValue(StringSet<TString, Owner<ConcatDirect<__uint32> > > & me, TSource const & obj, Tag<TExpand> tag)
 {
-    static const unsigned VALUE = 10;
-};
-#endif
+    appendValue(me.limits, lengthSum(me) + length(obj), tag);
+    append(me.concat, obj, tag);
+}
+}
 
-template <typename TContainer, typename TSpec>
-struct MinLength<ContainerView<TContainer, TSpec> >
+// ----------------------------------------------------------------------------
+// Reads SeqsStore Config
+// ----------------------------------------------------------------------------
+
+typedef SeqConfig<void>         YaraReadsConfig;
+
+//struct YaraReadsConfig
+//{
+//    typedef Dna5                    TAlphabet;
+//    typedef Alloc<>                 TSeqSpec;
+//    typedef Owner<ConcatDirect<> >  TSeqsSpec;
+//    typedef Owner<ConcatDirect<> >  TSeqNamesSpec;
+//};
+
+// ----------------------------------------------------------------------------
+// Contigs SeqsStore Config
+// ----------------------------------------------------------------------------
+
+struct YaraContigsConfig
 {
-    static const unsigned VALUE = 10;
+    typedef Dna5                            TAlphabet;
+    typedef Packed<YaraStringSpec>          TSeqSpec;
+    typedef Owner<ConcatDirect<> >          TSeqsSpec;
+    typedef Owner<ConcatDirect<__uint32> >  TSeqNamesSpec;
+};
+
+namespace seqan {
+template <typename TStorageSpec>
+struct SmartFileContext<SmartFile<Bam, Output, YaraContigs>, TStorageSpec>
+{
+    typedef StringSet<CharString, Owner<ConcatDirect<__uint32> > >  TNameStore;
+    typedef NameStoreCache<TNameStore>                              TNameStoreCache;
+    typedef BamIOContext<TNameStore, TNameStoreCache, TStorageSpec> Type;
 };
 }
 

@@ -71,10 +71,10 @@ namespace SEQAN_NAMESPACE_MAIN
 for @Class.Index@ based substring searches.
 ..cat:Index
 
-..tag.EsaFindMlr:Binary search with mlr-heuristic.
+..tag.FinderMlr:Binary search with mlr-heuristic.
 ...remarks:Exact string matching using a suffix array binary search with the mlr-heuristic.
 
-..tag.EsaFindLcpe:Binary search using lcp values.
+..tag.FinderLcpe:Binary search using lcp values.
 ...remarks:Exact string matching using a suffix array binary search and a lcp-interval tree.
 
 ..tag.FinderSTree:Suffix tree search.
@@ -108,13 +108,13 @@ for @Class.Index@ based substring searches.
  * @tag IndexFindAlgorithm#QGramFindLookup
  * @brief q-gram search. Finds q-grams in a @link IndexQGram @endlink index using the hash table.
  *
- * @tag IndexFindAlgorithm#EsaFindLcpe
+ * @tag IndexFindAlgorithm#FinderLcpe
  * @brief Binary search using lcp values.
  *
  *
  * Exact string matching using a suffix array binary search and a lcp-interval tree.
  *
- * @tag IndexFindAlgorithm#EsaFindMlr
+ * @tag IndexFindAlgorithm#FinderMlr
  * @brief Binary search with mlr-heuristic.
  *
  * Exact string matching using a suffix array binary search with the mlr-heuristic.
@@ -124,8 +124,8 @@ for @Class.Index@ based substring searches.
     struct FinderLcpe_;    // Suffix Array finder using an enhanced LCP-Table
     struct FinderSTree_;    // Suffix Array finder using an enhanced LCP-Table
 
-    typedef Tag<FinderMlr_> const EsaFindMlr;
-    typedef Tag<FinderLcpe_> const EsaFindLcpe;
+    typedef Tag<FinderMlr_> const FinderMlr;
+    typedef Tag<FinderLcpe_> const FinderLcpe;
     typedef Tag<FinderSTree_> const FinderSTree;
 
 	template <typename TSpec = void>
@@ -148,7 +148,7 @@ for @Class.Index@ based substring searches.
 */
 /*!
  * @mfn Index#DefaultIndexSpec
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Default @link Index @endlink specialization type.
  *
  * @signature DefaultIndexSpec<TText>::Type;
@@ -190,7 +190,7 @@ for @Class.Index@ based substring searches.
 //TODO(singer): Does not belong here but to the text concept
 /*!
  * @mfn Index#DefaultIndexStringSpec
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Default @link String @endlink specialization type of the @link Fibre
  *        @endlink of an @link Index @endlink.
  *
@@ -387,7 +387,7 @@ To get a reference or the type of a specific fibre use @Function.getFibre@ or @M
 
 /*!
  * @mfn Fibre
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Type of a specific container member (fibre).
  *
  * @signature Fibre<TObject, TSpec>::Type;
@@ -451,7 +451,7 @@ To get a reference or the type of a specific fibre use @Function.getFibre@ or @M
 
 /*!
  * @mfn Index#DefaultIndexCreator
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @note Advanced functionality, not commonly used.
  * @brief Default algorithm to create a demanded and not yet existing @link Fibre @endlink.
  *
@@ -608,7 +608,7 @@ should use the functions @Function.posLocalize@, @Function.posGlobalize@, @Funct
 
 /*!
  * @mfn SAValue
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief The default alphabet type of a suffix array, i.e. the type to store a
  *        position of a string or string set.
  *
@@ -787,8 +787,9 @@ should use the functions @Function.posLocalize@, @Function.posGlobalize@, @Funct
 	template <typename InType, typename TLimitsString, typename Result = typename Value<TLimitsString>::Type>
 	struct FunctorGlobalize : public ::std::unary_function<InType,Result>
 	{
-		TLimitsString const *limits;
-		FunctorGlobalize() {}
+		TLimitsString const * limits;
+
+		FunctorGlobalize() : limits() {}
 		FunctorGlobalize(TLimitsString const &_limits) : limits(&_limits) {}
 
 		inline Result operator()(InType const &x) const
@@ -918,7 +919,7 @@ The string ISSI occurs 2 times in MISSISSIPPI and has 4 characters.
 
 /*!
  * @fn Index#getFibre
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Returns a specific fibre of a container.
  *
  * @signature TFibre getFibre(index, fibreTag);
@@ -1114,7 +1115,7 @@ Hit at position: < 0 , 0 >
 
 /*!
  * @fn Index#length
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Returns the number of characters in the underlying text of the index.
  *
  * @signature TSize length(index);
@@ -1165,7 +1166,7 @@ Hit at position: < 0 , 0 >
 
 /*!
  * @fn Index#countSequences
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Return the number of sequences in an index' underlying text.
  *
  * @signature TSize countSequences(index);
@@ -1282,7 +1283,7 @@ I	ISSISSIPPI*/
 
 /*!
  * @fn Index#textAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>value(indexText(..), ..)</tt>.
  *
  * @signature TValue textAt(position, index);
@@ -1373,7 +1374,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn Index#rawtextAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>value(indexRawText(..), ..)</tt>.
  *
  * @signature TValue rawtextAt(position, index);
@@ -1426,7 +1427,7 @@ I	ISSIPPI
 I	ISSISSIPPI*/
 /*!
  * @fn IndexEsa#saAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @note Advanced functionality, not commonly used.
  * @brief Shortcut for <tt>value(indexSA(..), ..)</tt>.
  *
@@ -1483,9 +1484,11 @@ I	ISSISSIPPI*/
 ..include:seqan/index.h
 */
 
-/*!
+// TODO(weese): I disabled the doc, as we don't want to encourage users to use it
+
+/*
  * @fn IndexEsa#rawsaAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @note Advanced functionality, not commonly used.
  * @brief Shortcut for <tt>value(indexRawSA(..), ..)</tt>.
  *
@@ -1506,7 +1509,7 @@ I	ISSISSIPPI*/
 //////////////////////////////////////////////////////////////////////////////
 /*!
  * @fn IndexEsa#isaAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>value(indexIsa(..), ..)</tt>.
  *
  * @signature TValue isaAt(position, index);
@@ -1540,7 +1543,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn IndexEsa#lcpAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>value(indexLcp(..), ..)</tt>.
  *
  * @signature TValue lcpAt(position, index);
@@ -1575,7 +1578,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn IndexEsa#lcpeAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>value(indexLcpe(..), ..)</tt>.
  *
  * @signature TValue lcpeAt(position, index);
@@ -1610,7 +1613,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn IndexEsa#childAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>value(indexChildtab(..), ..)</tt>.
  * 
  * @signature TValue childAt(position, index);
@@ -1645,15 +1648,15 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn IndexEsa#bwtAt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>value(indexBwt(..), ..)</tt>.
  * 
- * @signature TReference bwtAt(position, index);
+ * @signature TValue bwtAt(position, index);
  * 
  * @param[in] index    The @link IndexEsa @endlink object holding the fibre.
  * @param[in] position A position in the array on which the value should be accessed.
  * 
- * @return TReference A reference or proxy to the value.
+ * @return TValue A reference or proxy to the value.
  */
 
 	template <typename TPos, typename TIndex>
@@ -1719,7 +1722,7 @@ I	ISSISSIPPI
 */
 /*!
  * @fn Index#indexText
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaText)</tt>.
  *
  * @signature TFibre indexText(index);
@@ -1797,11 +1800,11 @@ I	ISSISSIPPI
 ..returns:A reference to the @Tag.ESA Index Fibres.EsaRawText@ fibre (concatenated input text).
 ..include:seqan/index.h
 */
-//TODO(singer) The RawText Fibre exist for more then the Esa index
+
 /*!
- * @fn IndexEsa#indexRawText
- * @headerfile seqan/index.h
- * @brief Shortcut for <tt>$getFibre(.., EsaRawText)</tt>.
+ * @fn Index#indexRawText
+ * @headerfile <seqan/index.h>
+ * @brief Shortcut for <tt>$getFibre(.., FibreRawText)</tt>.
  *
  * @signature TFibre indexRawText(position, index);
  *
@@ -1856,7 +1859,7 @@ I	ISSISSIPPI*/
 //TODO(singer) The function in not only defined for the esa index
 /*!
  * @fn IndexEsa#indexSA
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaSA)</tt>.
  *
  * @signature TSa indexSA(index);
@@ -1908,9 +1911,10 @@ I	ISSISSIPPI*/
 */
 
 // TODO(singer): should this be documented? 
+// TODO(weese): better not, we don't want to encourage users to use it
 /*
  * @fn Index#indexRawSA
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaRawSA)</tt>.
  *
  * @signature TSa indexRawSA(index);
@@ -1934,7 +1938,7 @@ I	ISSISSIPPI*/
 //////////////////////////////////////////////////////////////////////////////
 /*!
  * @fn IndexEsa#indexIsa
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaIsa)</tt>.
  *
  * @signature TIsa indexIsa(index);
@@ -1963,7 +1967,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn IndexEsa#indexLcp
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaLcp)</tt>.
  *
  * @signature TLcp indexLcp(index);
@@ -1992,7 +1996,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn IndexEsa#indexLcpe
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaLcpe)</tt>.
  *
  * @signature TLcpe indexLcpe(index);
@@ -2019,16 +2023,16 @@ I	ISSISSIPPI*/
 ..returns:A reference to the @Tag.ESA Index Fibres.EsaBwt@ fibre (Burrows-Wheeler table).
 ..include:seqan/index.h
 */
-/*
+/*!
  * @fn IndexEsa#indexBwt
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaBwt)</tt>.
  *
  * @signature TBwt indexBwt(index);
  *
  * @param[in] index The @link IndexEsa @endlink object holding the fibre.
  *
- * @return TBwt A reference to the @link IndexEsaFibres.EsaBwt @endlink fibre (Burrows-Wheeler table).
+ * @return TBwt A reference to the @link IndexEsaFibres#EsaBwt @endlink fibre (Burrows-Wheeler table).
  */
 
 	template <typename TText, typename TSpec>
@@ -2050,7 +2054,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn IndexEsa#indexChildtab
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief Shortcut for <tt>getFibre(.., EsaChildtab)</tt>.
  *
  * @signature TChildTab indexChildtab(index);
@@ -2093,7 +2097,7 @@ I	ISSISSIPPI*/
 */
 /*!
  * @fn Index#open
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief This functions opens an index from disk.
  *
  * @signature bool open(index, fileName[, mode]);
@@ -2125,7 +2129,7 @@ I	ISSISSIPPI*/
 
 /*! 
  * @fn Index#save
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * @brief This functions saves an index to disk.
  *
  * @signature bool save(index, fileName[, mode]);

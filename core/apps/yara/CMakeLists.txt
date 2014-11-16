@@ -17,19 +17,25 @@ message (STATUS "Configuring core/apps/yara")
 # Search C++11.
 find_package(CXX11 REQUIRED)
 
-# Stop here if C++11 was not found.
-if (NOT CXX11_FOUND)
+# Stop here if there is no C++11 with STL.
+if (NOT (CXX11_FOUND AND CXX11_STL_FOUND))
     message (STATUS "  C++11 compiler required to build yara.")
     return ()
-endif (NOT CXX11_FOUND)
+endif (NOT (CXX11_FOUND AND CXX11_STL_FOUND))
+
+# Disable parallelism in MSVC as it supports only OpenMP 2.0.
+if (MSVC)
+  set (SEQAN_FIND_DEPENDENCIES ZLIB BZIP2)
+else ()
+  set (SEQAN_FIND_DEPENDENCIES OpenMP ZLIB BZIP2)
+endif ()
 
 # Search SeqAn and select dependencies.
-set (SEQAN_FIND_DEPENDENCIES OpenMP ZLIB BZIP2) #CUDA
 find_package (SeqAn REQUIRED)
 
 # Warn if OpenMP was not found.
 if (NOT SEQAN_HAS_OPENMP)
-  message (STATUS "  OpenMP not found: building yara without multi-threading.")
+  message (STATUS "  OpenMP 3.0 not found: building yara without multi-threading.")
 endif (NOT SEQAN_HAS_OPENMP)
 
 # Warn if Zlib was not found.
@@ -77,10 +83,12 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SEQAN_CXX_FLAGS} ${CXX11_CXX_FLAGS}")
 
 # Update the list of file names below if you add source files to your application.
 add_executable(yara_indexer indexer.cpp
-                            store_genome.h
+                            misc_tags.h
                             misc_timer.h
                             misc_options.h
                             misc_types.h
+                            store_seqs.h
+                            bits_matches.h
                             index_fm.h)
 
 add_executable(yara_mapper    mapper.cpp
@@ -94,16 +102,20 @@ add_executable(yara_mapper    mapper.cpp
                               mapper_selector.h
                               mapper_aligner.h
                               mapper_writer.h
-                              store_reads.h
-                              store_genome.h
+                              basic_alphabet.h
+                              file_pair.h
+                              file_prefetched.h
+                              store_seqs.h
                               misc_tags.h
                               misc_timer.h
                               misc_options.h
                               misc_types.h
+                              bits_reads.h
                               bits_hits.h
                               bits_matches.h
                               bits_context.h
                               bits_seeds.h
+                              bits_bucket.h
                               find_extender.h
                               find_verifier.h
                               index_fm.h)
@@ -118,7 +130,7 @@ target_link_libraries (yara_mapper ${SEQAN_LIBRARIES})
 
 # Set variables for installing, depending on the selected build type.
 if (NOT SEQAN_PREFIX_SHARE_DOC)
-  seqan_setup_install_vars (yara_indexer yara_mapper)
+  seqan_setup_install_vars (yara)
 endif (NOT SEQAN_PREFIX_SHARE_DOC)
 
 # Install yara in ${PREFIX}/bin directory
@@ -141,7 +153,8 @@ seqan_add_app_test (yara)
 # ----------------------------------------------------------------------------
 
 # Include executable yara_mapper in CTD structure.
-set (SEQAN_CTD_EXECUTABLES ${SEQAN_CTD_EXECUTABLES} yara_mapper CACHE INTERNAL "")
+set (SEQAN_CTD_EXECUTABLES ${SEQAN_CTD_EXECUTABLES}
+                           yara_indexer yara_mapper CACHE INTERNAL "")
 
 # ----------------------------------------------------------------------------
 # CPack Install

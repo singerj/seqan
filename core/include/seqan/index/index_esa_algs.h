@@ -70,7 +70,7 @@ namespace SEQAN_NAMESPACE_MAIN
 /*!
  * @class SuperMaxRepeatsIterator Super Max Repeats Iterator
  * @extends BottomUpIterator
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief Iterator to search for all supermaximal repeats.
  *
@@ -190,7 +190,7 @@ namespace SEQAN_NAMESPACE_MAIN
 /*!
  * @class SuperMaxRepeatsFastIterator Super Max Repeats Fast Iterator
  * @extends BottomUpIterator
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief Iterator to search for all supermaximal repeats (for enh. suffix arrays only).
  *
@@ -352,7 +352,7 @@ namespace SEQAN_NAMESPACE_MAIN
 /*!
  * @class MaxRepeatsIterator Max Repeats Iterator
  * @extends BottomUpIterator
- * @headerfile seqan/index.h
+ * @headerfile <seqan/index.h>
  * 
  * @brief Iterator to search for all maximal repeats.
  * 
@@ -390,7 +390,7 @@ namespace SEQAN_NAMESPACE_MAIN
 	struct FractionHeader_ {
 		TSize	begin, end;
 		TSize	size;
-		FractionHeader_() {}
+		FractionHeader_() : begin(0), end(0), size(0) {}
 		FractionHeader_(TSize _begin, TSize _end, TSize _size):
 			begin(_begin), end(_end), size(_size) {}
 	};

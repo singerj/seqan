@@ -53,6 +53,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <typeinfo>
 
 #ifdef PLATFORM_WINDOWS
 #include <Windows.h>    // DeleteFile()
@@ -67,7 +68,77 @@
 #include <signal.h>
 #endif  // #ifdef PLATFORM_WINDOWS
 
-#include <assert.h>
+// ============================================================================
+// Classes
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Class Demangler
+// ----------------------------------------------------------------------------
+// Holds the name of a given C++ type T.
+// NOTE(esiragusa): this class could become a subclass of CStyle String...
+
+namespace seqan {
+
+template <typename T>
+struct Demangler
+{
+#ifdef PLATFORM_GCC
+    char *data_begin;
+#else
+    const char *data_begin;
+#endif
+
+    Demangler()
+    {
+        T t;
+        _demangle(*this, t);
+    }
+
+    Demangler(T const & t)
+    {
+        _demangle(*this, t);
+    }
+
+    ~Demangler()
+    {
+#ifdef PLATFORM_GCC
+        free(data_begin);
+#endif
+    }
+};
+
+// ============================================================================
+// Functions
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Function _demangle(Demangler)
+// ----------------------------------------------------------------------------
+
+template <typename T>
+inline void _demangle(Demangler<T> & me, T const & t)
+{
+#ifdef PLATFORM_GCC
+    int status;
+    me.data_begin = abi::__cxa_demangle(typeid(t).name(), NULL, NULL, &status);
+#else
+    me.data_begin = typeid(t).name();
+#endif
+}
+
+// ----------------------------------------------------------------------------
+// Function toCString(Demangler)
+// ----------------------------------------------------------------------------
+
+template <typename T>
+inline const char * toCString(Demangler<T> const & me)
+{
+
+    return me.data_begin;
+}
+
+}
 
 /*!
  * @defgroup AssertMacros Assertion and Check Macros
@@ -795,8 +866,10 @@ const char * tempFileName()
 
 #else  // ifdef PLATFORM_WINDOWS_VS
     strcpy(fileNameBuffer, "/tmp/SEQAN.XXXXXXXXXXXXXXXXXXXX");
+    mode_t cur_umask = umask(S_IRWXO | S_IRWXG);  // to silence Coverity warning
     int _tmp = mkstemp(fileNameBuffer);
     (void) _tmp;
+    umask(cur_umask);
     unlink(fileNameBuffer);
     mkdir(fileNameBuffer, 0777);
 
@@ -919,6 +992,8 @@ int endTestSuite()
         }
 
         rmdir(StaticData::tempFileNames()[i].c_str());
+        if (closedir(dpdf) != 0)
+            std::cerr << "WARNING: Could not delete directory " << StaticData::tempFileNames()[i] << "\n";
 #endif  // #ifdef PLATFORM_WINDOWS
     }
 
@@ -1927,7 +2002,7 @@ SEQAN_END_TESTSUITE
     }
 
 /*!
- * @macro TestSystemMacros#SEQAN_CALL_TESTS
+ * @macro TestSystemMacros#SEQAN_CALL_TEST
  * @headerfile <seqan/basic.h>
  * @brief Expand to calling a test.
  *
@@ -1963,14 +2038,24 @@ SEQAN_CALL_TEST(test_name);
 // This macro expands to code to call a given test.
 #define SEQAN_CALL_TEST(test_name)                                      \
     do {                                                                \
-        ::seqan::ClassTest::beginTest(# test_name);                      \
+        seqan::ClassTest::beginTest(# test_name);                       \
         try {                                                           \
             SEQAN_TEST_ ## test_name<true>();                           \
-        } catch (::seqan::ClassTest::AssertionFailedException e) {       \
+        } catch (seqan::ClassTest::AssertionFailedException e) {        \
             /* Swallow exception, go on with next test. */              \
             (void) e;  /* Get rid of unused variable warning. */        \
+        } catch (std::exception const & e) {                            \
+            std::cerr << "Unexpected exception of type "                \
+                      << toCString(seqan::Demangler<std::exception>(e)) \
+                      << "; message: " << e.what() << "\n";             \
+            seqan::ClassTest::StaticData::thisTestOk() = false;         \
+            seqan::ClassTest::StaticData::errorCount() += 1;            \
+        } catch (...) {                                                 \
+            std::cerr << "Unexpected exception of unknown type\n";      \
+            seqan::ClassTest::StaticData::thisTestOk() = false;         \
+            seqan::ClassTest::StaticData::errorCount() += 1;            \
         }                                                               \
-        ::seqan::ClassTest::endTest();                                  \
+        seqan::ClassTest::endTest();                                    \
     } while (false)
 
 /*!

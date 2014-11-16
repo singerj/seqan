@@ -336,7 +336,7 @@ public:
 
 /*!
  * @mfn ModCyclicShapeModifiedIterator#Cargo
- * @headerfile seqan/modifier.h
+ * @headerfile <seqan/modifier.h>
  * @brief Cargo of ModCyclicShape ModCyclicShape Modified Iterator and ModCyclicShape Modified String.
  * @signature Cargo<ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > >::Type;
  * @tparam THost Host iterator of ModifiedIterator.
@@ -356,7 +356,7 @@ struct Cargo<ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > >
 
 /*!
  * @mfn ModCyclicShapeModifiedString#Cargo
- * @headerfile seqan/modifier.h
+ * @headerfile <seqan/modifier.h>
  * @brief Cargo of ModCyclicShape ModCyclicShape Modified Iterator and ModCyclicShape Modified String.
  * @signature Cargo<ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > >::Type;
  * @tparam THost Host container of ModifiedString.
@@ -415,9 +415,11 @@ begin(ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > const & me, Ta
 {
     typedef typename Iterator<ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > const,
         Tag<TTagSpec> const>::Type TResult;
+    typedef typename Size<CyclicShape<TSpec> >::Type TSize;
+
     TResult tmp(begin(host(me), tag_));
     _copyCargo(tmp, me);
-    host(tmp) += cargo(me).loffset;
+    host(tmp) += (TSize)cargo(me).loffset;
     return tmp;
 }
 
@@ -428,9 +430,11 @@ begin(ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > & me, Tag<TTag
 {
     typedef typename Iterator<ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > >,
         Tag<TTagSpec> const>::Type TResult;
+    typedef typename Size<CyclicShape<TSpec> >::Type TSize;
+
     TResult tmp(begin(host(me), tag_));
     _copyCargo(tmp, me);
-    host(tmp) += cargo(me).loffset;
+    host(tmp) += (TSize)cargo(me).loffset;
     return tmp;
 }
 
@@ -440,7 +444,7 @@ begin(ModifiedString<THost, ModCyclicShape<CyclicShape<TSpec> > > & me, Tag<TTag
 
 /*!
  * @fn ModCyclicShapeModifiedString#end
- * @headerfile seqan/modifier.h
+ * @headerfile <seqan/modifier.h>
  * @brief Returns an iterator to the end of the container.
  * @signature TIterator end(modStr[, tag]);
  * @tparam TIterator ModCyclicShape Modified Iterator to be returned.
@@ -609,7 +613,7 @@ template<typename THost, typename TSpec, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > &
 operator+=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta)
 {
-    if (_isNegative(delta))
+    if (isNegative(delta))
     {
         me -= -(typename MakeSigned<TDelta>::Type)delta;
     }
@@ -633,7 +637,7 @@ template<typename THost, typename TSpec, typename TDelta>
 inline ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > > &
 operator-=(ModifiedIterator<THost, ModCyclicShape<CyclicShape<TSpec> > >&me, TDelta delta)
 {
-    if (_isNegative(delta))
+    if (isNegative(delta))
     {
         me += -(typename MakeSigned<TDelta>::Type)delta;
     }

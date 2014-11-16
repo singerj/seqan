@@ -72,7 +72,7 @@ def main(source_base, binary_base):
         conf = app_tests.TestConf(
             program=path_to_indexer,
             args=[ph.inFile('input/%s-genome.fa' % organism),
-                  '-xp', ph.outFile('%s-genome' % organism)],
+                  '-o', ph.outFile('%s-genome' % organism)],
             to_diff=[(ph.inFile('gold/%s-genome.%s' % (organism, ext)),
                      ph.outFile('%s-genome.%s' % (organism, ext)), 'md5') for ext in exts])
         conf_list.append(conf)
@@ -85,9 +85,9 @@ def main(source_base, binary_base):
 #                    ['--threads', '1' ]],
 #                    ['--threads', '8' ]
 #                  ]
-#    mapper_suffix = ['t1'], 't8']
+#    mapper_suffix = ['t1', 't8']
 
-    mapper_args = [['--threads', '1' ]]
+    mapper_args = [[]]
     mapper_suffix = ['t1']
 
     for organism in ['adeno']:
@@ -95,9 +95,8 @@ def main(source_base, binary_base):
 
             conf = app_tests.TestConf(
                 program=path_to_mapper,
-                args=[ph.inFile('input/%s-genome.fa' % organism),
+                args=[ph.inFile('gold/%s-genome' % organism),
                       ph.inFile('input/%s-reads_1.fa' % organism),
-                      '-xp', ph.inFile('gold/%s-genome' % organism),
                       '-o', ph.outFile('%s-reads_1.%s.sam' % (organism, mapper_suffix[i]))] +
                       mapper_args[i],
                 to_diff=[(ph.inFile('gold/%s-reads_1.%s.sam' % (organism, mapper_suffix[i])),

@@ -95,9 +95,8 @@ struct QueryMatches {
 	bool disabled;
 	TSize lengthAdjustment;
 
-	QueryMatches() {
-		disabled = false;
-	}
+	QueryMatches() : disabled(false), lengthAdjustment(0)
+	{}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -123,10 +122,12 @@ struct StellarMatch {
 	TPos end2;
 	TRow row2;
 
-	StellarMatch() {}
+	StellarMatch() : id(), orientation(false), begin1(0), end1(0), begin2(0), end2(0)
+	{}
 
-	template<typename TAlign, typename TId>
-	StellarMatch(TAlign & _align, TId _id, bool _orientation) {
+	template <typename TAlign, typename TId>
+	StellarMatch(TAlign & _align, TId _id, bool _orientation)
+	{
 		id = _id;
 		orientation = _orientation;
 		row1 = row(_align, 0);
@@ -230,8 +231,6 @@ struct LessLength : public ::std::binary_function <TMatch, TMatch, bool> {
 template<typename TSequence, typename TId, typename TRowNo, typename TSize>
 inline bool
 _isUpstream(StellarMatch<TSequence, TId> & match1, StellarMatch<TSequence, TId> & match2, TRowNo row, TSize minLength) {
-//IOREV _notio_
-SEQAN_CHECKPOINT 
 	typedef typename StellarMatch<TSequence, TId>::TPos TPos;
 
 	TPos e1, b2;

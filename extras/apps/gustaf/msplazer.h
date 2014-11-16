@@ -185,6 +185,7 @@ struct Breakpoint
         midPosId("####"),
         startSeqStrand(true),
         endSeqStrand(true),
+        midPosStrand(false),
         startSeqPos(0),
         endSeqPos(0),
         dupTargetPos(maxValue<unsigned>()),
@@ -217,6 +218,7 @@ struct Breakpoint
         midPosId("####"),
         startSeqStrand(sStrand),
         endSeqStrand(eStrand),
+        midPosStrand(false),
         startSeqPos(sPos),
         endSeqPos(ePos),
         dupTargetPos(maxValue<unsigned>()),
@@ -250,6 +252,7 @@ struct Breakpoint
         midPosId("####"),
         startSeqStrand(sStrand),
         endSeqStrand(eStrand),
+        midPosStrand(false),
         startSeqPos(sPos),
         endSeqPos(ePos),
         dupTargetPos(maxValue<unsigned>()),
@@ -265,7 +268,8 @@ struct Breakpoint
         insertionSeq("NNNN"),
         revStrandDel(false),
         translSuppStartPos(false),
-        translSuppEndPos(false)
+        translSuppEndPos(false),
+        breakend(false)
     {appendValue(supportIds, spId); }
     /*
     Breakpoint(TId const & sId,
@@ -414,7 +418,9 @@ struct MSplazerChain
     // bool transl/dupl;
 
     MSplazerChain(TScoreAlloc & _scores) :
-        matchDistanceScores(_scores), mateJoinPosition(0), isEmpty(false), isPartial(false)
+        startVertex(), endVertex(),
+        matchDistanceScores(_scores), mateJoinPosition(0),
+        isEmpty(false), isPartial(false)
     {}
 };
 

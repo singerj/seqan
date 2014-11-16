@@ -808,6 +808,43 @@ shrinkToFit(String<TValue, Packed<THostspec> > & me)
     shrinkToFit(host(me));
 }
 
+// --------------------------------------------------------------------------
+// Function _clearUnusedBits()
+// --------------------------------------------------------------------------
+
+template <typename TValue, typename THostspec>
+inline void 
+_clearUnusedBits(String<TValue, Packed<THostspec> > & me)
+{
+    typedef String<TValue, Packed<THostspec> > TPackedString;
+    typedef PackedTraits_<TPackedString> TTraits;
+
+    typedef typename Host<TPackedString>::Type THost;
+    typedef typename Iterator<THost, Standard>::Type THostIterator;
+
+    typedef typename TTraits::THostValue THostValue;
+    typedef typename THostValue::TBitVector TBitVector;
+    typedef typename Size<TPackedString>::Type TSize;
+
+    static const TBitVector ALL_ONE = ~(TBitVector)0 >> TTraits::WASTED_BITS;
+
+    THostIterator it = begin(host(me), Standard());
+    THostIterator itEnd = end(host(me), Standard());
+
+    if (it == itEnd)
+        return;
+
+    // zero all wasted bits
+    if (TTraits::WASTED_BITS != 0)
+        for (++it; it != itEnd; ++it)
+            it->i &= ALL_ONE;
+
+    // zero the last half-filled tuple
+    TSize lastValues = length(me) % TTraits::VALUES_PER_HOST_VALUE;
+    if (lastValues != 0)
+        back(host(me)).i &= ALL_ONE & ~(ALL_ONE >> (lastValues * TTraits::BITS_PER_VALUE));
+}
+
 /*
 
 template<typename TTarget, typename TSource1, typename TSource2>
@@ -1555,32 +1592,6 @@ operator--(Iter<TPackedString, Packed<THostspec> > & me)
     return me;
 }
 
-// ----------------------------------------------------------------------------
-// Helper Function _helperIsNegative()
-// ----------------------------------------------------------------------------
-
-// to remove '... < 0 is always false' warning
-template <typename T>
-inline bool
-_isNegative(T, False)
-{
-    return false;
-}
-
-template <typename T>
-inline bool
-_isNegative(T t, True)
-{
-    return t < 0;
-}
-
-template <typename T>
-inline bool
-_isNegative(T t)
-{
-    return _isNegative(t, typename IsSameType<T, typename MakeSigned_<T>::Type>::Type());
-}
-
 // --------------------------------------------------------------------------
 // Function operator+() for (iter, integral)
 // --------------------------------------------------------------------------
@@ -1592,7 +1603,7 @@ operator+(Iter<TPackedString, Packed<THostspec> > const & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter - (-(typename MakeSigned<TIntegral>::Type)delta);
 
     TIntegral ofs = (TIntegral)iter.localPos + delta;
@@ -1608,7 +1619,7 @@ operator+(TIntegral const & delta,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter - (-(typename MakeSigned<TIntegral>::Type)delta);
 
     TIntegral ofs = (TIntegral)iter.localPos + delta;
@@ -1628,7 +1639,7 @@ operator+=(Iter<TPackedString, Packed<THostspec> > & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter -= -(typename MakeSigned<TIntegral>::Type)delta;
 
     TIntegral ofs = (TIntegral)iter.localPos + delta;
@@ -1648,7 +1659,7 @@ operator-(Iter<TPackedString, Packed<THostspec> > const & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter + (-(typename MakeSigned<TIntegral>::Type)delta);
 
     TIntegral ofs = delta + (TIntegral)(TTraits::VALUES_PER_HOST_VALUE - 1) - (TIntegral)iter.localPos;
@@ -1668,7 +1679,7 @@ operator-=(Iter<TPackedString, Packed<THostspec> > & iter,
 {
     typedef PackedTraits_<TPackedString> TTraits;
 
-    if (_isNegative(delta))
+    if (isNegative(delta))
         return iter += -(typename MakeSigned<TIntegral>::Type)delta;
 
     TIntegral ofs = delta + (TIntegral)(TTraits::VALUES_PER_HOST_VALUE - 1) - (TIntegral)iter.localPos;
@@ -1739,7 +1750,7 @@ template <typename THostSpec>
 inline typename Position<String<bool, Packed<THostSpec> > >::Type
 bitScanForward(String<bool, Packed<THostSpec> > const & obj)
 {
-    typedef String<bool, Packed<THostSpec> >  TPackedString;
+    typedef String<bool, Packed<THostSpec> > TPackedString;
     typedef typename Position<TPackedString>::Type TPosition;
     typedef typename Host<TPackedString>::Type TPackedHost;
     typedef typename Iterator<TPackedHost const, Standard>::Type TConstPackedHostIterator;
@@ -1947,10 +1958,10 @@ inline bool
 testAllZeros(String<bool, Packed<THostSpec> > const & obj)
 {
     typedef String<bool, Packed<THostSpec> > TPackedString;
-    typedef PackedTraits_<TPackedString> TPackedTraits;
+    typedef PackedTraits_<TPackedString> TTraits;
 
-    return _packedStringTestAll(obj, FunctorTestAllZeros<TPackedString>((TPackedTraits::VALUES_PER_HOST_VALUE -
-                                     (length(obj) % TPackedTraits::VALUES_PER_HOST_VALUE))));
+    return _packedStringTestAll(obj, FunctorTestAllZeros<TPackedString>((TTraits::VALUES_PER_HOST_VALUE -
+                                     (length(obj) % TTraits::VALUES_PER_HOST_VALUE))));
 }
 
 // ----------------------------------------------------------------------------
@@ -1962,10 +1973,10 @@ inline bool
 testAllOnes(String<bool, Packed<THostSpec> > const & obj)
 {
     typedef String<bool, Packed<THostSpec> > TPackedString;
-    typedef PackedTraits_<TPackedString> TPackedTraits;
+    typedef PackedTraits_<TPackedString> TTraits;
 
-    return _packedStringTestAll(obj, FunctorTestAllOnes<TPackedString>((TPackedTraits::VALUES_PER_HOST_VALUE -
-                                     (length(obj) % TPackedTraits::VALUES_PER_HOST_VALUE))));
+    return _packedStringTestAll(obj, FunctorTestAllOnes<TPackedString>((TTraits::VALUES_PER_HOST_VALUE -
+                                     (length(obj) % TTraits::VALUES_PER_HOST_VALUE))));
 }
 
 // ----------------------------------------------------------------------------
@@ -1985,6 +1996,8 @@ inline bool open(String<TValue, Packed<THostspec> > & me, const char *fileName, 
 template <typename TValue, typename THostspec>
 inline bool save(String<TValue, Packed<THostspec> > const & me, const char *fileName, int openMode)
 {
+    // the visible part of the string is kept untouched and the function is thread-safe
+    _clearUnusedBits(const_cast<String<TValue, Packed<THostspec> > &>(me));
     return save(host(me), fileName, openMode);
 }
 
